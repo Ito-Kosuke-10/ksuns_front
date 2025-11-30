@@ -150,10 +150,13 @@ export default function QuestionPage() {
   };
 
   return (
-    <div className="flex flex-1 flex-col gap-6">
-      <ProgressBar completed={completedCount} total={QUESTION_TOTAL} />
+    <div id="simple-question-root" className="flex flex-1 flex-col gap-6">
+      <ProgressBar
+        completed={completedCount}
+        total={QUESTION_TOTAL}
+      />
 
-      <header className="flex flex-col gap-2">
+      <header id="simple-question-header" className="flex flex-col gap-2">
         <p className="text-sm font-medium text-slate-500">{question.title}</p>
         <h1 className="text-2xl font-semibold leading-8 text-slate-900">
           {`Q${question.number}. ${question.prompt}`}
@@ -185,7 +188,7 @@ export default function QuestionPage() {
         const clampedValue = Math.min(Math.max(rawValue, sliderMin), sliderMax);
 
         return (
-          <div className="rounded-2xl bg-white p-5 shadow-sm">
+          <div id="simple-question-slider-card" className="rounded-2xl bg-white p-5 shadow-sm">
             <div className="flex items-baseline justify-between gap-4">
               <div className="flex items-end gap-1">
                 <span className="text-3xl font-semibold text-slate-900">
@@ -200,6 +203,7 @@ export default function QuestionPage() {
               </span>
             </div>
             <input
+              id={`simple-question-slider-${question.id}`}
               type="range"
               min={sliderMin}
               max={sliderMax}
@@ -208,12 +212,12 @@ export default function QuestionPage() {
               onChange={(event) =>
                 setAnswer(question.id, [String(Number(event.target.value))])
               }
-              className="mt-6 w-full accent-sky-500"
+              className="mt-6 w-full slider-soft"
             />
           </div>
         );
       })() : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div id="simple-question-choice-grid" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {questionOptions.map((option) => (
             <ChoiceCard
               key={option.value}
@@ -229,14 +233,20 @@ export default function QuestionPage() {
       )}
 
       {errorMessage ? (
-        <p className="text-sm font-medium text-rose-600">{errorMessage}</p>
+        <p id="simple-question-error" className="text-sm font-medium text-rose-600">
+          {errorMessage}
+        </p>
       ) : null}
 
-      <div className="mt-auto flex items-center justify-between gap-3 pt-4">
+      <div
+        id="simple-question-footer"
+        className="mt-auto flex items-center justify-between gap-3 pt-4"
+      >
         {isFirstQuestion ? (
           <div />
         ) : (
           <button
+            id="simple-question-back-button"
             type="button"
             onClick={handleBack}
             className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-5 py-3 text-base font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
@@ -246,6 +256,7 @@ export default function QuestionPage() {
         )}
 
         <button
+          id={isLastQuestion ? "simple-question-submit-button" : "simple-question-next-button"}
           type="button"
           onClick={handleNext}
           disabled={isNextDisabled}
@@ -257,4 +268,3 @@ export default function QuestionPage() {
     </div>
   );
 }
-

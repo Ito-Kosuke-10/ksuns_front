@@ -35,17 +35,18 @@ export default function AxesPage() {
   }, []);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div id="axes-root" className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold text-slate-900">8つの項目</h1>
       {error && (
         <div className="rounded-2xl bg-white p-4 text-rose-600 shadow-sm">
           {error}
         </div>
       )}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div id="axes-grid" className="grid gap-4 sm:grid-cols-2">
         {axes.map((axis) => (
           <Link
             key={axis.code}
+            id={`axes-item-${axis.code}`}
             href={`/axes/${axis.code}`}
             className="rounded-2xl bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
           >

@@ -112,8 +112,8 @@ export default function DeepQuestionsPage() {
   const messages = useMemo(() => thread?.messages ?? [], [thread]);
 
   return (
-    <main className="bg-slate-50 text-slate-900">
-      <Container className="flex flex-col gap-6 py-10">
+    <main id="deep-questions-root" className="bg-slate-50 text-slate-900">
+      <Container id="deep-questions-container" className="flex flex-col gap-6 py-10">
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-3">
             <Button
@@ -197,8 +197,9 @@ export default function DeepQuestionsPage() {
                 ))}
               </div>
 
-              <div className="flex flex-col gap-3 rounded-2xl bg-slate-50 p-3">
+              <div id="deep-questions-input-card" className="flex flex-col gap-3 rounded-2xl bg-slate-50 p-3">
                 <textarea
+                  id="deep-questions-input"
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
                   rows={3}
                   value={input}
@@ -206,7 +207,12 @@ export default function DeepQuestionsPage() {
                   placeholder="この軸について詳しく知りたいことを書いてください"
                 />
                 <div className="flex justify-end">
-                  <Button onClick={handleSend} disabled={sending || !input.trim()} className="px-4 py-2">
+                  <Button
+                    id="deep-questions-send-button"
+                    onClick={handleSend}
+                    disabled={sending || !input.trim()}
+                    className="px-4 py-2"
+                  >
                     {sending ? (
                       <span className="flex items-center gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" />

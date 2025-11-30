@@ -256,8 +256,8 @@ export default function DashboardPage() {
   const deepQuestionAxis = data?.next_focus?.axis_code;
 
   return (
-    <main className="bg-slate-50 text-slate-900">
-      <Container className="flex flex-col gap-6 py-10">
+    <main id="dashboard-root" className="bg-slate-50 text-slate-900">
+      <Container id="dashboard-container" className="flex flex-col gap-6 py-10">
         <div className="flex flex-col gap-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Dashboard</p>
           <h1 className="text-2xl font-semibold text-slate-900">現在地と次の一歩</h1>
@@ -272,7 +272,7 @@ export default function DashboardPage() {
         {!loading && data && (
           <div className="flex flex-col gap-6">
             <section className="grid gap-6 lg:grid-cols-5">
-              <Card className="lg:col-span-2 flex h-full flex-col justify-between bg-gradient-to-br from-white to-slate-100">
+              <Card className="lg:col-span-2 flex h-full flex-col justify-between bg-linear-to-br from-white to-slate-100">
                 <div className="flex flex-col gap-3">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Concept</p>
                   <h2 className="text-xl font-semibold text-slate-900">{data.concept.title}</h2>

@@ -14,17 +14,31 @@ const secondaryButton =
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-900">
-      <Container className="flex justify-center">
-        <Card className="flex w-full max-w-md flex-col gap-4 p-6 text-center">
+    <main
+      id="home-root"
+      className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-900"
+    >
+      <Container id="home-container" className="flex justify-center">
+        <Card
+          id="home-main-card"
+          className="flex w-full max-w-md flex-col gap-4 p-6 text-center"
+        >
           <h1 className="text-xl font-semibold text-slate-900">飲食店開業シミュレーター</h1>
           <p className="text-sm text-slate-700">
-            まずは12問の簡単な質問に答えて、開業イメージを形にしましょう。
+            まず 12 問の簡単な質問に答えて、開業イメージを形にしていきましょう。
           </p>
-          <Link href="/simple_simulation/questions/1" className={`${primaryButton} w-full`}>
+          <Link
+            id="home-start-simulation-link"
+            href="/simple_simulation/questions/1"
+            className={`${primaryButton} w-full`}
+          >
             簡易シミュレーションを始める
           </Link>
-          <Link href="/login" className={`${secondaryButton} w-full`}>
+          <Link
+            id="home-login-link"
+            href="/login"
+            className={`${secondaryButton} w-full`}
+          >
             ログインする
           </Link>
         </Card>
@@ -32,3 +46,4 @@ export default function Home() {
     </main>
   );
 }
+

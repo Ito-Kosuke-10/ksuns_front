@@ -124,8 +124,8 @@ export default function DetailQuestionsPage() {
   };
 
   return (
-    <main className="bg-slate-50 text-slate-900">
-      <Container className="flex flex-col gap-6 py-10">
+    <main id="detail-questions-root" className="bg-slate-50 text-slate-900">
+      <Container id="detail-questions-container" className="flex flex-col gap-6 py-10">
         <div className="flex flex-col gap-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Detail Questions</p>
           <div className="flex flex-wrap items-center gap-3">
@@ -184,7 +184,7 @@ export default function DetailQuestionsPage() {
             ).length;
 
             return (
-              <Card key={axisCode} className="p-5">
+              <Card id={`detail-questions-axis-${axisCode}`} key={axisCode} className="p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -254,8 +254,13 @@ export default function DetailQuestionsPage() {
           })}
 
         {!loading && (
-          <div className="mt-4 flex justify-end">
-            <Button onClick={handleSave} disabled={saving} className="px-6 py-3">
+          <div id="detail-questions-footer" className="mt-4 flex justify-end">
+            <Button
+              id="detail-questions-save-button"
+              onClick={handleSave}
+              disabled={saving}
+              className="px-6 py-3"
+            >
               {saving ? (
                 <span className="flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
