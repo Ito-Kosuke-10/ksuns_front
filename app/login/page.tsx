@@ -1,25 +1,43 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Container } from "@/components/ui/container";
 import { apiFetch } from "@/lib/api-client";
+import { getAccessToken } from "@/lib/auth-token";
 
 const TERMS_URL = "#";
 const PRIVACY_URL = "#";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [authUrl, setAuthUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const loadQa = async () => {
+    const token = getAccessToken();
+    if (!token) return;
+    const { status } = await apiFetch("/dashboard");
+    if (status === 200) {
+      router.replace("/dashboard");
+    }
+  };
+
   useEffect(() => {
+    loadQa().catch(() => undefined);
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("error") === "signup_not_allowed") {
+      setError("既存ユーザー専用のログインです。まず簡易シミュレーションから始めてください。");
+    }
+
     const load = async () => {
-      const { data, status } = await apiFetch<{ auth_url: string }>("/auth/google/url");
+      const { data, status } = await apiFetch<{ auth_url: string }>("/auth/google/url?allow_create=false");
       if (data?.auth_url) {
         setAuthUrl(data.auth_url);
       } else {
@@ -31,11 +49,9 @@ export default function LoginPage() {
       }
     };
     load().catch(() =>
-      setError(
-        "ログインURLの取得に失敗しました。しばらく時間をおいて、もう一度お試しください。",
-      ),
+      setError("ログインURLの取得に失敗しました。しばらく時間をおいて、もう一度お試しください。"),
     );
-  }, []);
+  }, [router]);
 
   const handleLogin = () => {
     if (authUrl) {
@@ -57,9 +73,7 @@ export default function LoginPage() {
         <Card className="mt-4 flex w-full max-w-md flex-col gap-4 p-6">
           <div className="space-y-2">
             <h1 className="text-xl font-semibold text-slate-900">ログインして開業計画を保存</h1>
-            <p className="text-sm text-slate-700">
-              ログイン後、マイページでさらに詳細な開業イメージを検討できます。
-            </p>
+            <p className="text-sm text-slate-700">既存ユーザー専用です。新規作成は結果ページから行ってください。</p>
           </div>
 
           {error && <Alert variant="error">{error}</Alert>}
