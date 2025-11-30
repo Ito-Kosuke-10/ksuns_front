@@ -1,14 +1,16 @@
 'use client';
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ChoiceCard } from "../../components/ChoiceCard";
 import { ProgressBar } from "../../components/ProgressBar";
 import {
   QUESTIONS,
   QUESTION_TOTAL,
-  getQuestionByNumber,
+  PRICE_RANGE_BOUNDS,
   OPTION_ICONS,
+  SUB_GENRE_OPTIONS_BY_MAIN,
+  getQuestionByNumber,
   type QuestionOption,
 } from "../../data/questions";
 import { useAnswerContext } from "../../state/answer-context";
@@ -22,6 +24,7 @@ export default function QuestionPage() {
     [parsedQuestionNumber],
   );
   const { answers, setAnswer } = useAnswerContext();
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!question) {
@@ -34,7 +37,15 @@ export default function QuestionPage() {
   }
 
   const selectedValues = answers[question.id] ?? [];
-  const unknownValue = question.options.find((option) => option.isUnknown)?.value;
+  const isSliderQuestion = Boolean(question.slider);
+
+  const mainGenreValue = answers.main_genre?.[0];
+  const questionOptions =
+    question.id === "sub_genre" && mainGenreValue
+      ? SUB_GENRE_OPTIONS_BY_MAIN[mainGenreValue] ?? []
+      : question.options;
+
+  const unknownValue = questionOptions.find((option) => option.isUnknown)?.value;
 
   const completedCount = QUESTIONS.filter(
     (item) => item.number < question.number && (answers[item.id]?.length ?? 0) > 0,
@@ -43,7 +54,7 @@ export default function QuestionPage() {
   const toggleSelection = (option: QuestionOption) => {
     const isLastQuestion = question.number === QUESTION_TOTAL;
     const isAutoAdvanceAllowed =
-      question.type === "single" && question.id !== "q12" && !isLastQuestion;
+      question.type === "single" && !isSliderQuestion && !isLastQuestion;
 
     if (question.type === "single") {
       const currentValue = selectedValues[0];
@@ -51,6 +62,12 @@ export default function QuestionPage() {
         return;
       }
 
+      if (question.id === "main_genre") {
+        // メインジャンル変更時はサブジャンルをクリアして進捗を正しく反映させる
+        setAnswer("sub_genre", []);
+      }
+
+      setErrorMessage(null);
       setAnswer(question.id, [option.value]);
 
       if (isAutoAdvanceAllowed) {
@@ -62,6 +79,7 @@ export default function QuestionPage() {
 
     if (option.isUnknown) {
       const nextValues = selectedValues.includes(option.value) ? [] : [option.value];
+      setErrorMessage(null);
       setAnswer(question.id, nextValues);
       return;
     }
@@ -74,10 +92,11 @@ export default function QuestionPage() {
       ? withoutUnknown.filter((value) => value !== option.value)
       : [...withoutUnknown, option.value];
 
+    setErrorMessage(null);
     setAnswer(question.id, nextValues);
   };
 
-  const isNextDisabled = selectedValues.length === 0;
+  const isNextDisabled = isSliderQuestion ? false : selectedValues.length === 0;
   const isFirstQuestion = question.number === 1;
   const isLastQuestion = question.number === QUESTION_TOTAL;
 
@@ -87,7 +106,40 @@ export default function QuestionPage() {
   };
 
   const handleNext = () => {
-    if (isNextDisabled) return;
+    if (isNextDisabled) {
+      setErrorMessage("選択してください");
+      return;
+    }
+
+    if (isSliderQuestion && question.slider) {
+      let sliderMin = question.slider.min;
+      let sliderMax = question.slider.max;
+
+      if (question.id === "price_point") {
+        const rangeValue = answers.price_range?.[0] ?? "price_0_2000";
+        const bounds = PRICE_RANGE_BOUNDS[rangeValue];
+        if (bounds) {
+          sliderMin = bounds.min;
+          sliderMax = bounds.max;
+        }
+      }
+
+      const defaultValue =
+        question.id === "price_point"
+          ? Math.round((sliderMin + sliderMax) / 2 / question.slider.step) *
+            question.slider.step
+          : question.slider.defaultValue;
+
+      const currentRaw = selectedValues[0]
+        ? Number(selectedValues[0])
+        : defaultValue;
+
+      const nextValue = Math.min(Math.max(currentRaw, sliderMin), sliderMax);
+
+      setAnswer(question.id, [String(nextValue)]);
+    }
+
+    setErrorMessage(null);
 
     if (isLastQuestion) {
       router.push("/simple_simulation/result");
@@ -108,19 +160,77 @@ export default function QuestionPage() {
         </h1>
       </header>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {question.options.map((option) => (
-          <ChoiceCard
-            key={option.value}
-            label={option.label}
-            selected={selectedValues.includes(option.value)}
-            isUnknown={option.isUnknown}
-            icon={OPTION_ICONS[option.value]}
-            onClick={() => toggleSelection(option)}
-            className={option.isUnknown ? "col-span-full sm:col-span-2" : ""}
-          />
-        ))}
-      </div>
+      {isSliderQuestion && question.slider ? (() => {
+        let sliderMin = question.slider.min;
+        let sliderMax = question.slider.max;
+
+        if (question.id === "price_point") {
+          const rangeValue = answers.price_range?.[0] ?? "price_0_2000";
+          const bounds = PRICE_RANGE_BOUNDS[rangeValue];
+          if (bounds) {
+            sliderMin = bounds.min;
+            sliderMax = bounds.max;
+          }
+        }
+
+        const defaultValue =
+          question.id === "price_point"
+            ? Math.round((sliderMin + sliderMax) / 2 / question.slider.step) *
+              question.slider.step
+            : question.slider.defaultValue;
+
+        const rawValue = selectedValues[0]
+          ? Number(selectedValues[0])
+          : defaultValue;
+        const clampedValue = Math.min(Math.max(rawValue, sliderMin), sliderMax);
+
+        return (
+          <div className="rounded-2xl bg-white p-5 shadow-sm">
+            <div className="flex items-baseline justify-between gap-4">
+              <div className="flex items-end gap-1">
+                <span className="text-3xl font-semibold text-slate-900">
+                  {clampedValue.toLocaleString()}
+                </span>
+                <span className="text-sm text-slate-600">
+                  {question.slider.unit}
+                </span>
+              </div>
+              <span className="text-xs text-slate-500">
+                {`${sliderMin.toLocaleString()} ${question.slider.unit} 〜 ${sliderMax.toLocaleString()} ${question.slider.unit}`}
+              </span>
+            </div>
+            <input
+              type="range"
+              min={sliderMin}
+              max={sliderMax}
+              step={question.slider.step}
+              value={clampedValue}
+              onChange={(event) =>
+                setAnswer(question.id, [String(Number(event.target.value))])
+              }
+              className="mt-6 w-full accent-sky-500"
+            />
+          </div>
+        );
+      })() : (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {questionOptions.map((option) => (
+            <ChoiceCard
+              key={option.value}
+              label={option.label}
+              selected={selectedValues.includes(option.value)}
+              isUnknown={option.isUnknown}
+              icon={OPTION_ICONS[option.value]}
+              onClick={() => toggleSelection(option)}
+              className={option.isUnknown ? "col-span-full sm:col-span-2" : ""}
+            />
+          ))}
+        </div>
+      )}
+
+      {errorMessage ? (
+        <p className="text-sm font-medium text-rose-600">{errorMessage}</p>
+      ) : null}
 
       <div className="mt-auto flex items-center justify-between gap-3 pt-4">
         {isFirstQuestion ? (
@@ -147,3 +257,4 @@ export default function QuestionPage() {
     </div>
   );
 }
+
