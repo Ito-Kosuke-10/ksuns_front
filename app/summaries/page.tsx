@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { apiFetch } from "@/lib/api-client";
@@ -19,6 +19,14 @@ const SUMMARY_TYPES = [
 ];
 
 export default function SummariesPage() {
+  return (
+    <Suspense fallback={<div className="rounded-2xl bg-white p-4 text-slate-700 shadow-sm">Loading...</div>}>
+      <SummariesContent />
+    </Suspense>
+  );
+}
+
+function SummariesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [selected, setSelected] = useState<string | null>(null);

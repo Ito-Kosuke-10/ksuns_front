@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -130,6 +130,22 @@ const OK_LINE_COLOR = "#16a34a";
 const HIGHLIGHT_COLOR = "#0284c7";
 
 export default function DashboardPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="bg-slate-50 text-slate-900">
+          <Container className="py-10">
+            <Alert>読み込み中...</Alert>
+          </Container>
+        </main>
+      }
+    >
+      <DashboardContent />
+    </Suspense>
+  );
+}
+
+function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [data, setData] = useState<DashboardData | null>(null);

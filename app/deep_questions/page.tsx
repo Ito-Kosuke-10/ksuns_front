@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Loader2, Send, Sparkles } from "lucide-react";
 
@@ -36,6 +36,22 @@ type DeepThread = {
 };
 
 export default function DeepQuestionsPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="bg-slate-50 text-slate-900">
+          <Container className="py-10">
+            <Alert>読み込み中...</Alert>
+          </Container>
+        </main>
+      }
+    >
+      <DeepQuestionsContent />
+    </Suspense>
+  );
+}
+
+function DeepQuestionsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [axes, setAxes] = useState<AxisOption[]>([]);
