@@ -1,13 +1,16 @@
 import { apiFetch } from "../api-client";
 
 describe("apiFetch", () => {
+  const originalEndpoint = process.env.NEXT_PUBLIC_API_ENDPOINT;
   const originalFetch = global.fetch;
 
   afterEach(() => {
     global.fetch = originalFetch!;
+    process.env.NEXT_PUBLIC_API_ENDPOINT = originalEndpoint;
   });
 
   it("returns data when response is ok and JSON is valid", async () => {
+    process.env.NEXT_PUBLIC_API_ENDPOINT = "http://localhost:8000";
     const mockJson = { message: "ok" };
     const response: Partial<Response> = {
       ok: true,
