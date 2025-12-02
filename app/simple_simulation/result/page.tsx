@@ -4,13 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { apiFetch } from "@/lib/api-client";
+import type { QuestionId } from "../data/questions";
 import { useAnswerContext } from "../state/answer-context";
 
 type SimulationResult = {
   session_id: number;
-  concept_one_liner?: string;
-  concept_detail?: string;
-  funds_comment_text?: string;
+  concept_title: string;
+  concept_detail: string;
+  funds_summary: string;
   axis_scores?: Record<string, number>;
 };
 
@@ -32,6 +33,20 @@ export default function ResultPage() {
   );
 
   useEffect(() => {
+    const required: QuestionId[] = [
+      "main_genre",
+      "sub_genre",
+      "seats",
+      "price_point",
+      "business_hours",
+      "location",
+    ];
+    const missing = required.some((key) => !(answers[key]?.length));
+    if (missing) {
+      router.replace("/");
+      return;
+    }
+
     const submit = async () => {
       setLoading(true);
       setError(null);
@@ -39,6 +54,11 @@ export default function ResultPage() {
         method: "POST",
         body: { answers: answerPayload },
       });
+
+      if (status === 400) {
+        router.replace("/");
+        return;
+      }
 
       if (data) {
         setResult(data);
@@ -52,7 +72,7 @@ export default function ResultPage() {
       setError("結果の取得に失敗しました");
       setLoading(false);
     });
-  }, [answerPayload]);
+  }, [answerPayload, answers, router]);
 
   useEffect(() => {
     const loadAuthUrl = async () => {
@@ -69,12 +89,11 @@ export default function ResultPage() {
     router.push("/simple_simulation/questions/1");
   };
 
-  const conceptOneLiner =
-    result?.concept_one_liner || result?.concept_detail?.split("\n")[0] || "仮コンセプトを生成中です";
+  const conceptTitle = result?.concept_title || "仮コンセプトを生成中です";
   const conceptDetail =
-    result?.concept_detail || result?.concept_one_liner || "簡易シミュレーションの回答をもとに仮コンセプトを生成します。";
+    result?.concept_detail || "簡易シミュレーションの回答をもとに仮コンセプトを生成します。";
   const fundsSummary =
-    result?.funds_comment_text || "客単価・席数・営業時間から、ざっくりと収支の注意点を提示します。";
+    result?.funds_summary || "客単価・席数・営業時間から、ざっくりと収支の注意点を提示します。";
 
   return (
     <div className="flex flex-1 flex-col gap-6">
@@ -93,7 +112,7 @@ export default function ResultPage() {
         <section className="grid gap-4 lg:grid-cols-2">
           <article className="lg:col-span-2 rounded-2xl bg-white p-5 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-sky-600">仮コンセプト</p>
-            <h2 className="mt-2 text-2xl font-bold text-slate-900">{conceptOneLiner}</h2>
+            <h2 className="mt-2 text-2xl font-bold text-slate-900">{conceptTitle}</h2>
             <p className="mt-3 text-base leading-7 text-slate-800">{conceptDetail}</p>
           </article>
 
@@ -144,3 +163,4 @@ export default function ResultPage() {
     </div>
   );
 }
+
