@@ -67,6 +67,7 @@ type DashboardData = {
   growth_zone: number;
   owner_note?: string;
   latest_store_story?: string;
+  user_email: string;
 };
 
 type QAResponse = {
@@ -181,19 +182,19 @@ function DashboardContent() {
       const { data, status } = await apiFetch<DashboardData>("/dashboard");
       if (status === 401) {
         clearAccessToken();
-        router.replace("/login");
+        router.replace("/");
         return;
       }
       if (data) {
         setData(fillAxisSummaries(data));
         loadQaHistory();
       } else {
-        setError("??????????????????????????");
+        setError("ダッシュボードの取得に失敗しました。時間をおいて再試行してください。");
       }
       setLoading(false);
     };
     load().catch(() => {
-      setError("??????????????????????????");
+      setError("ダッシュボードの取得に失敗しました。時間をおいて再試行してください。");
       setLoading(false);
     });
   }, [router, searchParams, loadQaHistory]);
@@ -275,11 +276,21 @@ function DashboardContent() {
     <main id="dashboard-root" className="bg-slate-50 text-slate-900">
       <Container id="dashboard-container" className="flex flex-col gap-6 py-10">
         <div className="flex flex-col gap-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Dashboard</p>
-          <h1 className="text-2xl font-semibold text-slate-900">現在地と次の一歩</h1>
-          <p className="text-sm text-slate-600">
-            コンセプトとレーダーチャートで開業準備の全体像を確認し、次に強化するポイントを1つに絞って進めましょう。
-          </p>
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex flex-col gap-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Dashboard</p>
+              <h1 className="text-2xl font-semibold text-slate-900">現在地と次の一歩</h1>
+              <p className="text-sm text-slate-600">
+                コンセプトとレーダーチャートで開業準備の全体像を確認し、次に強化するポイントを1つに絞って進めましょう。
+              </p>
+            </div>
+            {data?.user_email && (
+              <div className="mt-2 text-right text-xs text-slate-600 sm:mt-0">
+                <p className="font-semibold text-slate-700">ログイン中</p>
+                <p className="truncate">{data.user_email}</p>
+              </div>
+            )}
+          </div>
         </div>
 
         {error && <Alert variant="error">{error}</Alert>}

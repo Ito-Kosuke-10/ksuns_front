@@ -33,7 +33,9 @@ export default function LoginPage() {
 
         const params = new URLSearchParams(window.location.search);
         if (params.get("error") === "signup_not_allowed") {
-          setError("既存ユーザー専用のログインです。まず簡易シミュレーションから始めてください。");
+          setError("既存ユーザー専用のログインです。簡易シミュレーションからマイページを作成してください。");
+          router.replace("/simple_simulation/questions/1");
+          return;
         }
 
         const { data, status } = await apiFetch<{ auth_url: string }>(
@@ -127,4 +129,3 @@ export default function LoginPage() {
     </main>
   );
 }
-
