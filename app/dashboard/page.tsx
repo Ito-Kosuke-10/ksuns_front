@@ -168,18 +168,18 @@ function DashboardContent() {
     router.push(`/axes/${axisCode}`);
   };
 
-  const renderAngleTick = (props: {
-    payload: { value: string; coordinate?: number };
-    x: number;
-    y: number;
-    cx?: number;
-    cy?: number;
-    midAngle?: number;
-    radius?: number;
-  }) => {
-    const { payload, x, y } = props;
-    const point = radarData.find((entry) => entry.label === payload.value);
-    if (!point) return null;
+const renderAngleTick = (props: {
+  payload: { value: string; coordinate?: number };
+  x: number;
+  y: number;
+  cx?: number;
+  cy?: number;
+  midAngle?: number;
+  radius?: number;
+}): JSX.Element => {
+  const { payload, x, y } = props;
+  const point = radarData.find((entry) => entry.label === payload.value);
+  if (!point) return <g />;
     const Icon = AXIS_ICONS[point.code];
     const isHover = point.code === hoverAxis;
     const color = isHover ? HIGHLIGHT_COLOR : "#475569";
