@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api-client";
 import type { QuestionId } from "../data/questions";
 import { useAnswerContext } from "../state/answer-context";
+import { getBrowserStorage } from "@/lib/storage";
 
 type SimulationResult = {
   session_id: number;
@@ -22,6 +23,25 @@ export default function ResultPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [authUrl, setAuthUrl] = useState<string | null>(null);
+  const [guestToken, setGuestToken] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
+
+  // guest_session_token をローカルに保持（なければ生成）
+  useEffect(() => {
+    const storage = getBrowserStorage();
+    if (!storage) return;
+    const existing = storage.getItem("guest_session_token");
+    if (existing) {
+      setGuestToken(existing);
+      return;
+    }
+    const token =
+      typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `guest-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    storage.setItem("guest_session_token", token);
+    setGuestToken(token);
+  }, []);
 
   const answerPayload = useMemo(
     () =>
@@ -46,13 +66,14 @@ export default function ResultPage() {
       router.replace("/");
       return;
     }
+    if (!guestToken || submitted) return;
 
     const submit = async () => {
       setLoading(true);
       setError(null);
       const { data, status } = await apiFetch<SimulationResult>("/simulations/simple/result", {
         method: "POST",
-        body: { answers: answerPayload },
+        body: { answers: answerPayload, guest_session_token: guestToken },
       });
 
       if (status === 400) {
@@ -66,13 +87,14 @@ export default function ResultPage() {
         setError(status === 401 ? "ログインが必要です" : "結果の取得に失敗しました");
       }
       setLoading(false);
+      setSubmitted(true);
     };
 
     submit().catch(() => {
       setError("結果の取得に失敗しました");
       setLoading(false);
     });
-  }, [answerPayload, answers, router]);
+  }, [answerPayload, answers, guestToken, router, submitted]);
 
   useEffect(() => {
     const loadAuthUrl = async () => {
@@ -163,4 +185,3 @@ export default function ResultPage() {
     </div>
   );
 }
-

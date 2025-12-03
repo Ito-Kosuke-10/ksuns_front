@@ -1,22 +1,8 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  ArrowRight,
-  MailQuestion,
-  Megaphone,
-  ShieldCheck,
-  Sofa,
-  Sparkles,
-  Store,
-  Target,
-  Timer,
-  Utensils,
-  Wallet,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { Megaphone, ShieldCheck, Sparkles, Timer, Wallet } from "lucide-react";
 import {
   PolarAngleAxis,
   PolarGrid,
@@ -70,60 +56,35 @@ type DashboardData = {
   user_email: string;
 };
 
-type QAResponse = {
-  reply: string;
-};
-
-type QAHistoryItem = {
-  question: string;
-  answer: string;
-  axis_code?: string | null;
-  created_at: string;
-};
-
-type QAListResponse = {
-  items: QAHistoryItem[];
-};
-
 type RadarPoint = {
   code: string;
   label: string;
   value: number;
   okLine: number;
-  isHighlight: boolean;
 };
 
 const AXIS_LABELS: Record<string, string> = {
   concept: "コンセプト",
-  funds: "収支予測",
-  compliance: "資金計画",
+  funds: "資金計画",
+  compliance: "コンプライアンス",
   operation: "オペレーション",
   location: "立地",
-  equipment: "内装外装",
-  marketing: "販促",
+  equipment: "設備",
+  marketing: "集客",
   menu: "メニュー",
 };
 
-const AXIS_ORDER = [
-  "concept",
-  "funds",
-  "compliance",
-  "operation",
-  "location",
-  "equipment",
-  "marketing",
-  "menu",
-];
+const AXIS_ORDER = ["concept", "funds", "compliance", "operation", "location", "equipment", "marketing", "menu"];
 
-const AXIS_ICONS: Record<string, LucideIcon> = {
+const AXIS_ICONS: Record<string, any> = {
   concept: Sparkles,
   funds: Wallet,
   compliance: ShieldCheck,
   operation: Timer,
-  location: Store,
-  equipment: Sofa,
+  location: Megaphone,
+  equipment: ShieldCheck,
   marketing: Megaphone,
-  menu: Utensils,
+  menu: Wallet,
 };
 
 const PRIMARY_COLOR = "#0ea5e9";
@@ -149,26 +110,11 @@ export default function DashboardPage() {
 function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [qaInput, setQaInput] = useState("");
-  const [qaReply, setQaReply] = useState<string | null>(null);
-  const [qaSending, setQaSending] = useState(false);
   const [hoverAxis, setHoverAxis] = useState<string | null>(null);
-  const [qaHistory, setQaHistory] = useState<QAHistoryItem[]>([]);
-
-  const loadQaHistory = useCallback(async () => {
-    const { data, status } = await apiFetch<QAListResponse>("/qa/messages?limit=4");
-    if (status === 401) {
-      clearAccessToken();
-      router.replace("/login");
-      return;
-    }
-    if (data?.items) {
-      setQaHistory(data.items);
-    }
-  }, [router]);
 
   useEffect(() => {
     const tokenFromUrl = searchParams.get("access_token");
@@ -179,25 +125,34 @@ function DashboardContent() {
     }
 
     const load = async () => {
-      const { data, status } = await apiFetch<DashboardData>("/dashboard");
-      if (status === 401) {
-        clearAccessToken();
-        router.replace("/");
-        return;
-      }
-      if (data) {
-        setData(fillAxisSummaries(data));
-        loadQaHistory();
-      } else {
+      try {
+        const { data, status } = await apiFetch<DashboardData>("/dashboard");
+        if (status === 401) {
+          clearAccessToken();
+          router.replace("/");
+          return;
+        }
+        if (data) {
+          setData(fillAxisSummaries(data));
+        } else {
+          setError("ダッシュボードの取得に失敗しました。時間をおいて再試行してください。");
+        }
+      } catch {
         setError("ダッシュボードの取得に失敗しました。時間をおいて再試行してください。");
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
-    load().catch(() => {
-      setError("ダッシュボードの取得に失敗しました。時間をおいて再試行してください。");
-      setLoading(false);
-    });
-  }, [router, searchParams, loadQaHistory]);
+
+    load();
+  }, [router, searchParams]);
+
+  useEffect(() => {
+    if (!data) return;
+    if (data.detail_progress.total > 0 && data.detail_progress.answered < data.detail_progress.total) {
+      router.replace("/detail_questions");
+    }
+  }, [data, router]);
 
   const radarData: RadarPoint[] = useMemo(() => {
     if (!data) return [];
@@ -206,7 +161,6 @@ function DashboardContent() {
       label: AXIS_LABELS[axis.code] ?? axis.name ?? axis.code,
       value: Number(axis.score.toFixed(1)),
       okLine: data.ok_line,
-      isHighlight: data.next_focus?.axis_code === axis.code,
     }));
   }, [data]);
 
@@ -214,63 +168,108 @@ function DashboardContent() {
     router.push(`/axes/${axisCode}`);
   };
 
-  const handleQaSend = async () => {
-    if (!qaInput.trim()) return;
-    setQaSending(true);
-    const { data, status } = await apiFetch<QAResponse>("/qa/messages", {
-      method: "POST",
-      body: { question: qaInput, context_type: "global" },
-    });
-    if (status === 401) {
-      clearAccessToken();
-      router.replace("/login");
-      return;
-    }
-    if (data?.reply) {
-      setQaReply(data.reply);
-      setQaInput("");
-      await loadQaHistory();
-    } else {
-      setError("回答の取得に失敗しました。時間をおいて再試行してください。");
-    }
-    setQaSending(false);
-  };
-
-  const renderAngleTick = ({ payload, x, y }: { payload: { value: string }; x: number; y: number }) => {
+  const renderAngleTick = (props: {
+    payload: { value: string; coordinate?: number };
+    x: number;
+    y: number;
+    cx?: number;
+    cy?: number;
+    midAngle?: number;
+    radius?: number;
+  }) => {
+    const { payload, x, y } = props;
     const point = radarData.find((entry) => entry.label === payload.value);
-    const Icon = point ? AXIS_ICONS[point.code] : null;
-    const isHighlight = point?.isHighlight ?? false;
-    const isHover = point?.code === hoverAxis;
-    const color = isHover || isHighlight ? HIGHLIGHT_COLOR : "#475569";
-    const code = point?.code;
+    if (!point) return null;
+    const Icon = AXIS_ICONS[point.code];
+    const isHover = point.code === hoverAxis;
+    const color = isHover ? HIGHLIGHT_COLOR : "#475569";
+    const bgColor = isHover ? "#e0f2fe" : "#f8fafc";
+    const borderColor = isHover ? "#38bdf8" : "#e2e8f0";
+    const width = 124;
+    const height = 34;
+    const radiusOffset = 24;
+    const iconYOffset = -11;
+    const textYOffset = 4;
+
+    const cxVal = Number.isFinite(props.cx) ? (props.cx as number) : 0;
+    const cyVal = Number.isFinite(props.cy) ? (props.cy as number) : 0;
+    const angleDeg = Number.isFinite((props.payload as any).coordinate)
+      ? ((props.payload as any).coordinate as number)
+      : Number.isFinite(props.midAngle)
+        ? (props.midAngle as number)
+        : 0;
+    const baseRadius = Number.isFinite(props.radius)
+      ? (props.radius as number)
+      : Math.hypot((x ?? 0) - cxVal, (y ?? 0) - cyVal);
+    const r = baseRadius + radiusOffset;
+    const rad = (-angleDeg * Math.PI) / 180;
+    const tx = cxVal + r * Math.cos(rad);
+    const ty = cyVal + r * Math.sin(rad);
+
+    const fx = Number.isFinite(tx) ? tx : x ?? 0;
+    const fy = Number.isFinite(ty) ? ty : y ?? 0;
 
     return (
       <g
-        transform={`translate(${x},${y})`}
+        transform={`translate(${fx},${fy})`}
         style={{ cursor: "pointer" }}
-        onClick={() => code && handleAxisClick(code)}
-        onMouseEnter={() => code && setHoverAxis(code)}
+        onClick={() => handleAxisClick(point.code)}
+        onMouseEnter={() => setHoverAxis(point.code)}
         onMouseLeave={() => setHoverAxis(null)}
       >
-        <rect x={-50} y={-14} width={100} height={28} fill="transparent" />
+        <rect
+          x={-width / 2}
+          y={-height / 2}
+          width={width}
+          height={height}
+          rx={height / 2}
+          fill={bgColor}
+          stroke={borderColor}
+          strokeWidth={1}
+        />
         {Icon ? (
-          <Icon className="h-4 w-4" style={{ color }} aria-hidden="true" transform="translate(-18, 0)" />
-        ) : (
-          <g />
-        )}
-        <text x={2} y={4} textAnchor="start" fill={color} fontSize={12}>
+          <Icon
+            className="h-4 w-4"
+            style={{ color }}
+            aria-hidden="true"
+            transform={`translate(${-width / 2}, ${iconYOffset})`}
+          />
+        ) : null}
+        <text x={Icon ? -width / 2 + 30 : -width / 2 + 10} y={textYOffset} textAnchor="start" fill={color} fontSize={12}>
           {payload.value}
         </text>
       </g>
     );
   };
 
-  const detailProgressRatio =
-    data && data.detail_progress.total > 0
-      ? Math.round((data.detail_progress.answered / data.detail_progress.total) * 100)
-      : 0;
+  if (loading || !data) {
+    return (
+      <main id="dashboard-root" className="bg-slate-50 text-slate-900">
+        <Container id="dashboard-container" className="flex flex-col gap-6 py-10">
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex flex-col gap-1">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Dashboard</p>
+                <h1 className="text-2xl font-semibold leading-8">開業準備の現在地</h1>
+              </div>
+              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <span className="rounded-full bg-slate-100 px-3 py-2">
+                  {error ? "取得エラー" : "読み込み中..."}
+                </span>
+              </div>
+            </div>
+            <div className="grid gap-4 lg:grid-cols-[1fr_2fr]">
+              <Card className="h-40 animate-pulse bg-slate-100" />
+              <Card className="h-40 animate-pulse bg-slate-100" />
+            </div>
+          </div>
+          {error ? <Alert variant="error">{error}</Alert> : <Alert>読み込み中...</Alert>}
+        </Container>
+      </main>
+    );
+  }
 
-  const deepQuestionAxis = data?.next_focus?.axis_code;
+  const deepQuestionAxis = data.next_focus?.axis_code;
 
   return (
     <main id="dashboard-root" className="bg-slate-50 text-slate-900">
@@ -279,262 +278,147 @@ function DashboardContent() {
           <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex flex-col gap-1">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Dashboard</p>
-              <h1 className="text-2xl font-semibold text-slate-900">現在地と次の一歩</h1>
-              <p className="text-sm text-slate-600">
-                コンセプトとレーダーチャートで開業準備の全体像を確認し、次に強化するポイントを1つに絞って進めましょう。
-              </p>
+              <h1 className="text-2xl font-semibold leading-8">開業準備の現在地</h1>
+              <p className="text-sm text-slate-600">コンセプトと準備度レーダーの概要を確認できます。</p>
             </div>
-            {data?.user_email && (
-              <div className="mt-2 text-right text-xs text-slate-600 sm:mt-0">
-                <p className="font-semibold text-slate-700">ログイン中</p>
-                <p className="truncate">{data.user_email}</p>
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+              {data.user_email ? (
+                <span className="rounded-full bg-slate-100 px-3 py-2">{data.user_email}</span>
+              ) : (
+                <span className="rounded-full bg-slate-100 px-3 py-2">未ログイン</span>
+              )}
+            </div>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-[1fr_2fr]">
+            <Card className="flex flex-col gap-3 p-5">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Concept</p>
+                <h3 className="text-lg font-semibold text-slate-900">
+                  {data.concept.title || "コンセプト未設定"}
+                </h3>
+                <p className="text-sm text-slate-700">
+                  {data.concept.description || "結果を保存してコンセプトを確認してください。"}
+                </p>
               </div>
-            )}
+            </Card>
+
+            <Card className="flex flex-col gap-3 p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Radar</p>
+                  <h3 className="text-lg font-semibold text-slate-900">準備度レーダー</h3>
+                </div>
+                <div className="hidden items-center gap-2 text-xs text-slate-600 lg:flex">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700">
+                    現在値
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700">
+                    OKライン {data.ok_line}
+                  </span>
+                </div>
+              </div>
+              <div className="mt-2 h-[430px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadarChart data={radarData}>
+                    <PolarGrid />
+                    <PolarAngleAxis dataKey="label" tick={renderAngleTick} />
+                    <PolarRadiusAxis
+                      angle={90}
+                      domain={[0, 10]}
+                      tick={({ payload, x, y }) => (
+                        <text x={x} y={y} textAnchor="middle" fill="#94a3b8" fontSize={10}>
+                          {payload.value}
+                        </text>
+                      )}
+                      strokeOpacity={0}
+                    />
+                    <Radar
+                      name="ok"
+                      dataKey="okLine"
+                      stroke={OK_LINE_COLOR}
+                      fill="transparent"
+                      isAnimationActive={false}
+                      strokeDasharray="4 4"
+                    />
+                    <Radar
+                      name="score"
+                      dataKey="value"
+                      stroke={PRIMARY_COLOR}
+                      fill={PRIMARY_COLOR}
+                      fillOpacity={0.25}
+                    />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
           </div>
         </div>
 
-        {error && <Alert variant="error">{error}</Alert>}
-        {loading && <Alert>読み込み中...</Alert>}
-
-        {!loading && data && (
-          <div className="flex flex-col gap-6">
-            <section className="grid gap-6 lg:grid-cols-5">
-              <Card className="lg:col-span-2 flex h-full flex-col justify-between bg-linear-to-br from-white to-slate-100">
-                <div className="flex flex-col gap-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Concept</p>
-                  <h2 className="text-xl font-semibold text-slate-900">{data.concept.title}</h2>
-                  <p className="text-sm leading-6 text-slate-700">{data.concept.description}</p>
-                </div>
-                <div className="mt-4 flex flex-wrap items-center gap-3">
-                  <Link
-                    href="/simple_simulation/questions/1"
-                    className="inline-flex items-center gap-2 rounded-full bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300"
-                  >
-                    もう一度診断する
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                  <span className="text-xs text-slate-500">
-                    直近の回答をベースにもう一度シミュレーションを回せます。
-                  </span>
-                </div>
-              </Card>
-
-              <Card className="lg:col-span-3 flex h-full flex-col">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Radar</p>
-                    <h2 className="text-lg font-semibold text-slate-900">開業準備レーダー</h2>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-slate-500">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1">
-                      <span className="h-3 w-3 rounded-full border border-slate-300" />
-                      現在値
-                    </span>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1">
-                      <span className="h-3 w-3 rounded-full border border-dashed border-green-500" />
-                      OKライン {data.ok_line}
-                    </span>
-                  </div>
-                </div>
-                <div className="mt-4 h-80 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart data={radarData}>
-                      <PolarGrid />
-                      <PolarAngleAxis dataKey="label" tick={renderAngleTick} />
-                      <PolarRadiusAxis
-                        angle={90}
-                        domain={[0, 10]}
-                        tick={({ payload, x, y }) => (
-                          <text x={x} y={y} textAnchor="middle" fill="#94a3b8" fontSize={10}>
-                            {payload.value}
-                          </text>
-                        )}
-                        strokeOpacity={0}
-                      />
-                      <Radar
-                        name="ok"
-                        dataKey="okLine"
-                        stroke={OK_LINE_COLOR}
-                        fill="transparent"
-                        isAnimationActive={false}
-                        strokeDasharray="4 4"
-                      />
-                      <Radar
-                        name="score"
-                        dataKey="value"
-                        stroke={PRIMARY_COLOR}
-                        fill={PRIMARY_COLOR}
-                        fillOpacity={0.25}
-                      />
-                      <Radar
-                        name="focus"
-                        dataKey={(entry: RadarPoint) => (entry.isHighlight ? entry.value : 0)}
-                        stroke={HIGHLIGHT_COLOR}
-                        fill={HIGHLIGHT_COLOR}
-                        fillOpacity={0.2}
-                      />
-                    </RadarChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-600">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700">
-                    詳細質問 {data.detail_progress.answered}/{data.detail_progress.total} 回答済み
-                  </span>
-                  {data.next_focus && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-3 py-1 font-semibold text-sky-700">
-                      次に強化: {data.next_focus.axis_name}
-                    </span>
-                  )}
-                </div>
-              </Card>
-            </section>
-
-            <section className="grid gap-4 lg:grid-cols-3">
-              <Card className="flex flex-col gap-3 p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Detail</p>
-                    <h3 className="text-lg font-semibold text-slate-900">詳細質問</h3>
-                    <p className="text-xs text-slate-600">
-                      24問のYES/NOでレーダーを更新します。未回答を埋めましょう。
-                    </p>
-                  </div>
-                  <span className="text-xs font-semibold text-slate-700">
-                    {detailProgressRatio}% 完了
-                  </span>
-                </div>
-                <div className="h-2 w-full rounded-full bg-slate-200">
-                  <div
-                    className="h-2 rounded-full bg-sky-500 transition-[width]"
-                    style={{ width: `${detailProgressRatio}%` }}
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Link
-                    href="/detail_questions"
-                    className="inline-flex items-center justify-center rounded-full bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300"
-                  >
-                    回答を開く
-                  </Link>
-                </div>
-              </Card>
-
-              <Card className="flex flex-col gap-3 p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Deep Dive</p>
-                    <h3 className="text-lg font-semibold text-slate-900">深掘り質問</h3>
-                    <p className="text-xs text-slate-600">
-                      AI に相談しながら不足している軸を深掘りできます。
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="secondary"
-                    onClick={() => router.push(deepQuestionAxis ? `/deep_questions?axis=${deepQuestionAxis}` : "/deep_questions")}
-                    className="px-4 py-2"
-                  >
-                    深掘りをはじめる
-                  </Button>
-                </div>
-              </Card>
-
-            <Card className="flex flex-col gap-3 p-5">
-              <div className="flex items-center gap-2">
-                <MailQuestion className="h-5 w-5 text-slate-500" />
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Chat</p>
-                  <h3 className="text-lg font-semibold text-slate-900">なんでも質問ボックス</h3>
-                </div>
+        <section className="grid gap-4 lg:grid-cols-3">
+          <Card className="flex flex-col gap-3 p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Deep Dive</p>
+                <h3 className="text-lg font-semibold text-slate-900">深掘り質問</h3>
+                <p className="text-xs text-slate-600">
+                  AI に相談しながら考えを深めたいときに使えるチャット形式の質問です。
+                </p>
+                {data.next_focus && (
+                  <p className="mt-1 text-xs text-slate-700">
+                    次に強化: {data.next_focus.axis_name}（{data.next_focus.reason}）
+                  </p>
+                )}
               </div>
-              <textarea
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
-                rows={3}
-                value={qaInput}
-                onChange={(event) => setQaInput(event.target.value)}
-                placeholder="気になることを自由に入力してください"
-              />
-              <div className="flex justify-end">
-                <Button onClick={handleQaSend} disabled={qaSending} className="px-4 py-2">
-                  送信
-                </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  router.push(deepQuestionAxis ? `/deep_questions?axis=${deepQuestionAxis}` : "/deep_questions")
+                }
+                className="px-4 py-2"
+              >
+                深掘りを始める
+              </Button>
+            </div>
+          </Card>
+
+          <Card className="flex flex-col gap-3 p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Chat</p>
+                <h3 className="text-lg font-semibold text-slate-900">なんでも質問</h3>
+                <p className="text-xs text-slate-600">
+                  別ページで AI に自由に質問できます（現在はハリボテ画面）。
+                </p>
               </div>
-              {qaReply && (
-                <div className="rounded-xl bg-slate-50 p-3 text-sm leading-6 text-slate-800">{qaReply}</div>
-              )}
-              {qaHistory.length > 0 && (
-                <div className="mt-2 space-y-2">
-                  {qaHistory.map((item, idx) => (
-                    <div key={`${item.created_at}-${idx}`} className="rounded-xl border border-slate-100 bg-white p-3 shadow-sm">
-                      <p className="text-xs font-semibold text-slate-500">
-                        Q: {item.axis_code ? `[${item.axis_code}] ` : ""}{item.question}
-                      </p>
-                      <p className="mt-1 text-sm leading-6 text-slate-800">A: {item.answer}</p>
-                      <p className="mt-1 text-[11px] text-slate-500">{new Date(item.created_at).toLocaleString()}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
-          </section>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => router.push("/chat")} className="px-4 py-2">
+                Chat ページへ
+              </Button>
+            </div>
+          </Card>
 
-            {data.next_focus && (
-              <Card className="flex flex-col gap-3 border border-sky-100 bg-sky-50 p-5">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <Target className="h-5 w-5 text-sky-600" />
-                    <p className="text-xs font-semibold uppercase tracking-wide text-sky-700">Next Action</p>
-                  </div>
-                  <span className="text-xs font-semibold text-slate-700">優先すべき軸は1つだけ</span>
-                </div>
-                <h3 className="text-lg font-semibold text-slate-900">{data.next_focus.axis_name}</h3>
-                <p className="text-sm text-slate-700">{data.next_focus.reason}</p>
-                <p className="text-sm font-semibold text-slate-900">{data.next_focus.message}</p>
-              </Card>
-            )}
+          <Card className="flex flex-col gap-3 p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Report</p>
+                <h3 className="text-lg font-semibold text-slate-900">開業プラン出力</h3>
+                <p className="text-xs text-slate-600">
+                  開業プランをグラフィカルに表示するページに遷移します（現在はハリボテ画面）。
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => router.push("/report")} className="px-4 py-2">
+                Report ページへ
+              </Button>
+            </div>
+          </Card>
+        </section>
 
-            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {data.axes.map((axis) => {
-                const Icon = AXIS_ICONS[axis.code];
-                return (
-                  <Card
-                    key={axis.code}
-                    className="flex cursor-pointer flex-col gap-3 p-4 transition hover:-translate-y-0.5 hover:shadow-md"
-                    onClick={() => handleAxisClick(axis.code)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-700">
-                          {Icon ? <Icon className="h-5 w-5" /> : <ShieldCheck className="h-5 w-5" />}
-                        </span>
-                        <div>
-                          <p className="text-xs uppercase tracking-wide text-slate-500">{axis.code}</p>
-                          <h4 className="text-sm font-semibold text-slate-900">{AXIS_LABELS[axis.code] ?? axis.name}</h4>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs text-slate-500">Score</p>
-                        <p className="text-xl font-semibold text-slate-900">{axis.score.toFixed(1)}</p>
-                      </div>
-                    </div>
-                    <p className="text-sm text-slate-700">{axis.comment}</p>
-                    <div className="rounded-lg bg-slate-50 p-3 text-xs text-slate-600">
-                      <p className="font-semibold text-slate-800">次の一歩</p>
-                      <p>{axis.next_step}</p>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-slate-500">
-                      <span>
-                        回答状況: {axis.answered}/{axis.total_questions}
-                      </span>
-                      <span>・ OKライン {axis.ok_line}</span>
-                    </div>
-                  </Card>
-                );
-              })}
-            </section>
-          </div>
-        )}
+        <section className="mt-auto flex flex-wrap gap-3 pt-4" />
       </Container>
     </main>
   );

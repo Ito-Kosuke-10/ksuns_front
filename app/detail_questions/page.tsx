@@ -93,6 +93,7 @@ export default function DetailQuestionsPage() {
 
   const totalCount = progress?.total ?? questions.length;
   const completionRatio = totalCount > 0 ? Math.round((answeredCount / totalCount) * 100) : 0;
+  const allAnswered = totalCount > 0 && answeredCount === totalCount;
 
   const setAnswer = (questionCode: string, value: boolean) => {
     setAnswers((previous) => {
@@ -103,6 +104,11 @@ export default function DetailQuestionsPage() {
   };
 
   const handleSave = async () => {
+    const total = totalCount;
+    if (total > 0 && answeredCount < total) {
+      setError("24問すべてに回答してください。");
+      return;
+    }
     setSaving(true);
     setError(null);
     const { data, status } = await apiFetch<SaveResponse>("/detail_questions", {
@@ -258,7 +264,7 @@ export default function DetailQuestionsPage() {
             <Button
               id="detail-questions-save-button"
               onClick={handleSave}
-              disabled={saving}
+              disabled={saving || !allAnswered}
               className="px-6 py-3"
             >
               {saving ? (
