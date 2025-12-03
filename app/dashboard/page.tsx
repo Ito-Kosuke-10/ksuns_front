@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState, type ReactElement } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Megaphone, ShieldCheck, Sparkles, Timer, Wallet } from "lucide-react";
 import {
@@ -176,7 +176,7 @@ const renderAngleTick = (props: {
   cy?: number;
   midAngle?: number;
   radius?: number;
-}): JSX.Element => {
+}): ReactElement => {
   const { payload, x, y } = props;
   const point = radarData.find((entry) => entry.label === payload.value);
   if (!point) return <g />;
