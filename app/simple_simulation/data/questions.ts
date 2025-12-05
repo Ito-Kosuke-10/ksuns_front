@@ -93,7 +93,9 @@ export const OPTION_ICONS: Record<string, LucideIcon> = {
   price_4000_6000: Wallet,
   price_6000_8000: Wallet,
   price_8000_10000: Wallet,
-  price_10000_12000: Wallet,
+  price_10000_15000: Wallet,
+  price_15000_20000: Wallet,
+  price_20000_plus: Wallet,
 
   // 営業時間帯
   morning_to_lunch: Sunrise,
@@ -430,18 +432,9 @@ export const SUB_GENRE_OPTIONS_BY_MAIN: Record<
   ],
 };
 
-export const PRICE_RANGE_BOUNDS: Record<
-  string,
-  { min: number; max: number }
-> = {
-  price_0_2000: { min: 0, max: 2000 },
-  price_2000_4000: { min: 2000, max: 4000 },
-  price_4000_6000: { min: 4000, max: 6000 },
-  price_6000_8000: { min: 6000, max: 8000 },
-  price_8000_10000: { min: 8000, max: 10000 },
-  price_10000_12000: { min: 10000, max: 12000 },
-  price_12000_50000: { min: 12000, max: 50000 },
-};
+// 後方互換性のため、price-ranges.ts から再エクスポート
+// 新しいコードでは price-ranges.ts の PRICE_RANGE_BOUNDS を使用すること
+export { PRICE_RANGE_BOUNDS } from "./price-ranges";
 
 export const QUESTIONS: Question[] = [
   {
@@ -501,13 +494,14 @@ export const QUESTIONS: Question[] = [
       "1 人あたり（ドリンク込み）の想定客単価のレンジを、イメージに一番近いものから 1 つ選んでください。",
     type: "single",
     options: [
-      { value: "price_0_2000", label: "〜 2,000 円（低単価帯）" },
-      { value: "price_2000_4000", label: "2,000 〜 4,000 円" },
-      { value: "price_4000_6000", label: "4,000 〜 6,000 円" },
-      { value: "price_6000_8000", label: "6,000 〜 8,000 円" },
-      { value: "price_8000_10000", label: "8,000 〜 10,000 円" },
-      { value: "price_10000_12000", label: "10,000 〜 12,000 円" },
-      { value: "price_12000_50000", label: "12,000 〜 50,000 円" },
+      { value: "price_0_2000", label: "〜2,000円" },
+      { value: "price_2000_4000", label: "2,000〜4,000円" },
+      { value: "price_4000_6000", label: "4,000〜6,000円" },
+      { value: "price_6000_8000", label: "6,000〜8,000円" },
+      { value: "price_8000_10000", label: "8,000〜10,000円" },
+      { value: "price_10000_15000", label: "10,000〜15,000円" },
+      { value: "price_15000_20000", label: "15,000〜20,000円" },
+      { value: "price_20000_plus", label: "20,000円以上" },
     ],
   },
   {
@@ -515,13 +509,13 @@ export const QUESTIONS: Question[] = [
     number: 5,
     title: "想定客単価（具体的な金額）",
     prompt:
-      "1 人あたりの想定客単価を、より具体的な金額で教えてください。（先ほど選んだレンジの中で、100 円単位で調整）",
+      "1 人あたりの想定客単価を、より具体的な金額で教えてください。（先ほど選んだレンジの中で、500 円単位で調整）",
     type: "single",
     options: [],
     slider: {
       min: 500,
-      max: 50000,
-      step: 100,
+      max: 30000,
+      step: 500,
       unit: "円",
       defaultValue: 3000,
     },
