@@ -1,0 +1,29 @@
+[1mdiff --git a/app/simple_simulation/data/questions.ts b/app/simple_simulation/data/questions.ts[m
+[1mindex d84cbf2..6119160 100644[m
+[1m--- a/app/simple_simulation/data/questions.ts[m
+[1m+++ b/app/simple_simulation/data/questions.ts[m
+[36m@@ -440,6 +440,7 @@[m [mexport const PRICE_RANGE_BOUNDS: Record<[m
+   price_6000_8000: { min: 6000, max: 8000 },[m
+   price_8000_10000: { min: 8000, max: 10000 },[m
+   price_10000_12000: { min: 10000, max: 12000 },[m
+[32m+[m[32m  price_12000_50000: { min: 12000, max: 50000 },[m
+ };[m
+ [m
+ export const QUESTIONS: Question[] = [[m
+[36m@@ -506,6 +507,7 @@[m [mexport const QUESTIONS: Question[] = [[m
+       { value: "price_6000_8000", label: "6,000 〜 8,000 円" },[m
+       { value: "price_8000_10000", label: "8,000 〜 10,000 円" },[m
+       { value: "price_10000_12000", label: "10,000 〜 12,000 円" },[m
+[32m+[m[32m      { value: "price_12000_50000", label: "12,000 〜 50,000 円" },[m
+     ],[m
+   },[m
+   {[m
+[36m@@ -518,7 +520,7 @@[m [mexport const QUESTIONS: Question[] = [[m
+     options: [],[m
+     slider: {[m
+       min: 500,[m
+[31m-      max: 12000,[m
+[32m+[m[32m      max: 50000,[m
+       step: 100,[m
+       unit: "円",[m
+       defaultValue: 3000,[m

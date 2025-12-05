@@ -14,6 +14,12 @@ import {
   type MainGenreValue,
   type QuestionOption,
 } from "../../data/questions";
+import {
+  PRICE_SLIDER_CONFIG,
+  calculateSliderInitialValue,
+  clampSliderValue,
+  formatCurrency,
+} from "../../data/price-ranges";
 import { useAnswerContext } from "../../state/answer-context";
 
 export default function QuestionPage() {
@@ -113,31 +119,33 @@ export default function QuestionPage() {
     }
 
     if (isSliderQuestion && question.slider) {
-      let sliderMin = question.slider.min;
-      let sliderMax = question.slider.max;
-
       if (question.id === "price_point") {
+        // 価格スライダーの場合、選択されたレンジから初期値を計算
         const rangeValue = answers.price_range?.[0] ?? "price_0_2000";
         const bounds = PRICE_RANGE_BOUNDS[rangeValue];
+        
         if (bounds) {
-          sliderMin = bounds.min;
-          sliderMax = bounds.max;
+          // 初期値 = (min + max) / 2 を500円刻みに
+          const initialValue = calculateSliderInitialValue(bounds);
+          const currentRaw = selectedValues[0] ? Number(selectedValues[0]) : initialValue;
+          const clampedValue = clampSliderValue(currentRaw);
+          setAnswer(question.id, [String(clampedValue)]);
+        } else {
+          // フォールバック: デフォルト値を使用
+          const defaultValue = question.slider.defaultValue;
+          const clampedValue = clampSliderValue(defaultValue);
+          setAnswer(question.id, [String(clampedValue)]);
         }
+      } else {
+        // その他のスライダー（座席数など）
+        const defaultValue = question.slider.defaultValue;
+        const currentRaw = selectedValues[0] ? Number(selectedValues[0]) : defaultValue;
+        const nextValue = Math.min(
+          Math.max(currentRaw, question.slider.min),
+          question.slider.max,
+        );
+        setAnswer(question.id, [String(nextValue)]);
       }
-
-      const defaultValue =
-        question.id === "price_point"
-          ? Math.round((sliderMin + sliderMax) / 2 / question.slider.step) *
-            question.slider.step
-          : question.slider.defaultValue;
-
-      const currentRaw = selectedValues[0]
-        ? Number(selectedValues[0])
-        : defaultValue;
-
-      const nextValue = Math.min(Math.max(currentRaw, sliderMin), sliderMax);
-
-      setAnswer(question.id, [String(nextValue)]);
     }
 
     setErrorMessage(null);
@@ -165,58 +173,89 @@ export default function QuestionPage() {
       </header>
 
       {isSliderQuestion && question.slider ? (() => {
-        let sliderMin = question.slider.min;
-        let sliderMax = question.slider.max;
-
         if (question.id === "price_point") {
+          // 価格スライダーの場合
           const rangeValue = answers.price_range?.[0] ?? "price_0_2000";
           const bounds = PRICE_RANGE_BOUNDS[rangeValue];
-          if (bounds) {
-            sliderMin = bounds.min;
-            sliderMax = bounds.max;
-          }
-        }
+          
+          // スライダーの範囲は常に500〜30,000に固定
+          const sliderMin = PRICE_SLIDER_CONFIG.min;
+          const sliderMax = PRICE_SLIDER_CONFIG.max;
+          const sliderStep = PRICE_SLIDER_CONFIG.step;
 
-        const defaultValue =
-          question.id === "price_point"
-            ? Math.round((sliderMin + sliderMax) / 2 / question.slider.step) *
-              question.slider.step
+          // 初期値計算: 選択されたレンジのmin/maxから計算
+          const initialValue = bounds
+            ? calculateSliderInitialValue(bounds)
             : question.slider.defaultValue;
 
-        const rawValue = selectedValues[0]
-          ? Number(selectedValues[0])
-          : defaultValue;
-        const clampedValue = Math.min(Math.max(rawValue, sliderMin), sliderMax);
+          const rawValue = selectedValues[0] ? Number(selectedValues[0]) : initialValue;
+          const clampedValue = clampSliderValue(rawValue);
 
-        return (
-          <div id="simple-question-slider-card" className="rounded-2xl bg-white p-5 shadow-sm">
-            <div className="flex items-baseline justify-between gap-4">
-              <div className="flex items-end gap-1">
-                <span className="text-3xl font-semibold text-slate-900">
-                  {clampedValue.toLocaleString()}
-                </span>
-                <span className="text-sm text-slate-600">
-                  {question.slider.unit}
+          return (
+            <div id="simple-question-slider-card" className="rounded-2xl bg-white p-5 shadow-sm">
+              <div className="flex items-baseline justify-between gap-4">
+                <div className="flex items-end gap-1">
+                  <span className="text-3xl font-semibold text-slate-900">
+                    {formatCurrency(clampedValue)}
+                  </span>
+                </div>
+                <span className="text-xs text-slate-500">
+                  {`${formatCurrency(sliderMin)} 〜 ${formatCurrency(sliderMax)}`}
                 </span>
               </div>
-              <span className="text-xs text-slate-500">
-                {`${sliderMin.toLocaleString()} ${question.slider.unit} 〜 ${sliderMax.toLocaleString()} ${question.slider.unit}`}
-              </span>
+              <input
+                id={`simple-question-slider-${question.id}`}
+                type="range"
+                min={sliderMin}
+                max={sliderMax}
+                step={sliderStep}
+                value={clampedValue}
+                onChange={(event) => {
+                  const newValue = clampSliderValue(Number(event.target.value));
+                  setAnswer(question.id, [String(newValue)]);
+                }}
+                className="mt-6 w-full slider-soft"
+              />
             </div>
-            <input
-              id={`simple-question-slider-${question.id}`}
-              type="range"
-              min={sliderMin}
-              max={sliderMax}
-              step={question.slider.step}
-              value={clampedValue}
-              onChange={(event) =>
-                setAnswer(question.id, [String(Number(event.target.value))])
-              }
-              className="mt-6 w-full slider-soft"
-            />
-          </div>
-        );
+          );
+        } else {
+          // その他のスライダー（座席数など）
+          const sliderMin = question.slider.min;
+          const sliderMax = question.slider.max;
+          const defaultValue = question.slider.defaultValue;
+          const rawValue = selectedValues[0] ? Number(selectedValues[0]) : defaultValue;
+          const clampedValue = Math.min(Math.max(rawValue, sliderMin), sliderMax);
+
+          return (
+            <div id="simple-question-slider-card" className="rounded-2xl bg-white p-5 shadow-sm">
+              <div className="flex items-baseline justify-between gap-4">
+                <div className="flex items-end gap-1">
+                  <span className="text-3xl font-semibold text-slate-900">
+                    {clampedValue.toLocaleString()}
+                  </span>
+                  <span className="text-sm text-slate-600">
+                    {question.slider.unit}
+                  </span>
+                </div>
+                <span className="text-xs text-slate-500">
+                  {`${sliderMin.toLocaleString()} ${question.slider.unit} 〜 ${sliderMax.toLocaleString()} ${question.slider.unit}`}
+                </span>
+              </div>
+              <input
+                id={`simple-question-slider-${question.id}`}
+                type="range"
+                min={sliderMin}
+                max={sliderMax}
+                step={question.slider.step}
+                value={clampedValue}
+                onChange={(event) =>
+                  setAnswer(question.id, [String(Number(event.target.value))])
+                }
+                className="mt-6 w-full slider-soft"
+              />
+            </div>
+          );
+        }
       })() : (
         <div id="simple-question-choice-grid" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {questionOptions.map((option: QuestionOption) => (
