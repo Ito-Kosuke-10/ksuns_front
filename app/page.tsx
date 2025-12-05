@@ -23,7 +23,7 @@ export default function Home() {
           id="home-main-card"
           className="flex w-full max-w-md flex-col gap-4 p-6 text-center"
         >
-          <h1 className="text-xl font-semibold text-slate-900">飲食店開業シミュレーター</h1>
+          <h1 className="text-xl font-semibold text-slate-900">おみせ開業AI</h1>
           <p className="text-sm text-slate-700">
             まず 12 問の簡単な質問に答えて、開業イメージを形にしていきましょう。
           </p>
@@ -32,7 +32,7 @@ export default function Home() {
             href="/simple_simulation/questions/1"
             className={`${primaryButton} w-full`}
           >
-            簡易シミュレーションを始める
+            簡易シミュレーション
           </Link>
           <Link
             id="home-login-link"
