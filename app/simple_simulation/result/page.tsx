@@ -106,6 +106,26 @@ export default function ResultPage() {
     loadAuthUrl().catch(() => undefined);
   }, []);
 
+// マイページ作成時の処理（からちゃん）
+  const handleCreateMyPage = () => {
+    const storage = getBrowserStorage();
+    if (storage) {
+      storage.setItem(
+        "pending_simple_simulation",
+        JSON.stringify({
+          answers: answerPayload,
+          guest_session_token: guestToken,
+        }),
+      );
+    }
+
+    if (authUrl) {
+      window.location.href = authUrl;
+    } else {
+      router.push("/login");
+    }
+  };
+
   const handleRestart = () => {
     resetAnswers();
     router.push("/simple_simulation/questions/1");
@@ -157,13 +177,14 @@ export default function ResultPage() {
         <button
           type="button"
           className="inline-flex items-center justify-center rounded-full bg-sky-600 px-6 py-3 text-base font-semibold text-white transition hover:bg-sky-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
-          onClick={() => {
-            if (authUrl) {
-              window.location.href = authUrl;
-            } else {
-              router.push("/login");
-            }
-          }}
+          // onClick={() => {
+          //   if (authUrl) {
+          //     window.location.href = authUrl;
+          //   } else {
+          //     router.push("/login");
+          //   }
+          // }}
+          onClick={handleCreateMyPage}　// からちゃん追加部分 マイページ作成部分に対応
         >
           この結果でマイページを作成する
         </button>

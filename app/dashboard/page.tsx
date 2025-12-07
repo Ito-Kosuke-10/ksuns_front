@@ -18,6 +18,7 @@ import { Card } from "@/components/ui/card";
 import { Container } from "@/components/ui/container";
 import { apiFetch } from "@/lib/api-client";
 import { clearAccessToken, setAccessToken } from "@/lib/auth-token";
+import { getBrowserStorage } from "@/lib/storage";　// からちゃん追加部分 マイページ作成部分に対応
 
 type AxisSummary = {
   code: string;
@@ -146,6 +147,37 @@ function DashboardContent() {
 
     load();
   }, [router, searchParams]);
+
+  // からちゃん追加部分 マイページ作成部分に対応
+  useEffect(() => {
+    const storage = getBrowserStorage();
+    if (!storage) return;
+
+    const raw = storage.getItem("pending_simple_simulation");
+    if (!raw) return;
+
+    // 一度だけ処理するため先に削除
+    storage.removeItem("pending_simple_simulation");
+
+    const payload = JSON.parse(raw) as {
+      answers: { question_code: string; values: string[] }[];
+      guest_session_token?: string | null;
+    };
+
+    const submit = async () => {
+      try {
+        await apiFetch("/simulations/simple/result", {
+          method: "POST",
+          body: payload,
+        });
+        // 必要ならここで Dashboard を再取得したい場合は router.refresh() などを検討
+      } catch (e) {
+        console.error("Failed to persist simple simulation", e);
+      }
+    };
+
+    submit();
+  }, []);
 
   useEffect(() => {
     if (!data) return;
