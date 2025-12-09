@@ -36,6 +36,7 @@ export async function apiFetch<T>(
 
   try {
     const json = (await response.json()) as T;
+    console.log("★AIからの返却データ:", json);
     return { data: json, status: response.status };
   } catch {
     return { data: null, status: response.status };

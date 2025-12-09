@@ -421,7 +421,7 @@ const renderAngleTick = (props: {
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Chat</p>
                 <h3 className="text-lg font-semibold text-slate-900">なんでも質問</h3>
                 <p className="text-xs text-slate-600">
-                  別ページで AI に自由に質問できます（現在はハリボテ画面）。
+                   AI に自由に質問できます。
                 </p>
               </div>
             </div>
