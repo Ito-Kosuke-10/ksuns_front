@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Container } from "@/components/ui/container";
 import { apiFetch } from "@/lib/api-client";
 import { clearAccessToken } from "@/lib/auth-token";
+import { ConceptPage } from "@/app/concept/page";
 
 type AxisOption = {
   code: string;
@@ -54,6 +55,7 @@ export default function DeepQuestionsPage() {
 function DeepQuestionsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const selectedAxisParam = searchParams.get("axis");
   const [axes, setAxes] = useState<AxisOption[]>([]);
   const [selectedAxis, setSelectedAxis] = useState<string | null>(null);
   const [thread, setThread] = useState<DeepThread | null>(null);
@@ -161,7 +163,11 @@ function DeepQuestionsContent() {
                 <select
                   className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
                   value={selectedAxis ?? ""}
-                  onChange={(e) => setSelectedAxis(e.target.value)}
+                  onChange={(e) => {
+                    const newAxis = e.target.value;
+                    setSelectedAxis(newAxis);
+                    router.push(`/deep_questions?axis=${newAxis}`);
+                  }}
                 >
                   {axes.map((axis) => (
                     <option key={axis.code} value={axis.code}>
@@ -179,7 +185,11 @@ function DeepQuestionsContent() {
               </div>
             </Card>
 
-            <Card className="flex flex-col gap-4 p-4">
+            {/* axis=concept の場合は ConceptPage のコンテンツを表示 */}
+            {selectedAxis === "concept" ? (
+              <ConceptPage hideHeader={true} />
+            ) : (
+              <Card className="flex flex-col gap-4 p-4">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-sky-600" />
                 <div>
@@ -244,6 +254,7 @@ function DeepQuestionsContent() {
                 </div>
               </div>
             </Card>
+            )}
           </div>
         )}
       </Container>
