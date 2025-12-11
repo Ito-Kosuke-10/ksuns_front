@@ -38,6 +38,7 @@ export type QuestionOption = {
   value: string;
   label: string;
   isUnknown?: boolean;
+  imageUrl?: string;
 };
 
 export type SliderConfig = {
@@ -445,18 +446,18 @@ export const QUESTIONS: Question[] = [
       "どんなジャンルのお店としてスタートしたいですか？一番近いものを 1 つ選んでください。",
     type: "single",
     options: [
-      { value: "izakaya", label: "居酒屋・酒場" },
-      { value: "japanese", label: "和食・定食" },
-      { value: "yakitori", label: "焼き鳥・串焼き" },
-      { value: "yakiniku", label: "焼肉・ホルモン" },
-      { value: "ramen", label: "ラーメン・つけ麺" },
-      { value: "curry_ethnic", label: "カレー・エスニック" },
-      { value: "italian", label: "イタリアン" },
-      { value: "french", label: "フレンチ・ビストロ" },
-      { value: "cafe", label: "カフェ・喫茶" },
-      { value: "sweets", label: "スイーツ・デザート" },
-      { value: "bar", label: "バー・ワインバー" },
-      { value: "bistro", label: "多国籍・創作系" },
+      { value: "izakaya", label: "居酒屋・酒場", imageUrl: "/images/genres/izakaya.jpg" },
+      { value: "japanese", label: "和食・定食", imageUrl: "/images/genres/japanese.jpg" },
+      { value: "yakitori", label: "焼き鳥・串焼き", imageUrl: "/images/genres/yakitori.jpg" },
+      { value: "yakiniku", label: "焼肉・ホルモン", imageUrl: "/images/genres/yakiniku.jpg" },
+      { value: "ramen", label: "ラーメン・つけ麺", imageUrl: "/images/genres/ramen.jpg" },
+      { value: "curry_ethnic", label: "カレー・エスニック", imageUrl: "/images/genres/curry_ethnic.jpg" },
+      { value: "italian", label: "イタリアン", imageUrl: "/images/genres/italian.jpg" },
+      { value: "french", label: "フレンチ・ビストロ", imageUrl: "/images/genres/french.jpg" },
+      { value: "cafe", label: "カフェ・喫茶", imageUrl: "/images/genres/cafe.jpg" },
+      { value: "sweets", label: "スイーツ・デザート", imageUrl: "/images/genres/sweets.jpg" },
+      { value: "bar", label: "バー・ワインバー", imageUrl: "/images/genres/bar.jpg" },
+      { value: "bistro", label: "多国籍・創作系", imageUrl: "/images/genres/bistro.jpg" },
     ],
   },
   {

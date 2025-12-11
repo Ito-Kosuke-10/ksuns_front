@@ -265,6 +265,7 @@ export default function QuestionPage() {
               selected={selectedValues.includes(option.value)}
               isUnknown={option.isUnknown}
               icon={OPTION_ICONS[option.value]}
+              imageUrl={option.imageUrl}
               onClick={() => toggleSelection(option)}
               className={option.isUnknown ? "col-span-full sm:col-span-2" : ""}
             />
