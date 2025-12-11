@@ -264,7 +264,7 @@ function DeepDiveChatContent() {
               />
               <div className="flex items-center justify-between">
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   onClick={handleComplete}
                   className="px-4 py-2 bg-green-50 hover:bg-green-100 border-green-300 text-green-700"
                   disabled={!hasMessages || sending || completing}
@@ -306,4 +306,3 @@ function DeepDiveChatContent() {
     </main>
   );
 }
-
