@@ -11,6 +11,7 @@ import { Container } from "@/components/ui/container";
 import { apiFetch } from "@/lib/api-client";
 import { clearAccessToken } from "@/lib/auth-token";
 import { ConceptPage } from "@/app/concept/page";
+import { RevenueForecastPage } from "@/app/revenue_forecast/page";
 
 type AxisOption = {
   code: string;
@@ -186,8 +187,11 @@ function DeepQuestionsContent() {
             </Card>
 
             {/* axis=concept の場合は ConceptPage のコンテンツを表示 */}
+            {/* axis=funds の場合は RevenueForecastPage のコンテンツを表示 */}
             {selectedAxis === "concept" ? (
               <ConceptPage hideHeader={true} />
+            ) : selectedAxis === "funds" ? (
+              <RevenueForecastPage hideHeader={true} />
             ) : (
               <Card className="flex flex-col gap-4 p-4">
               <div className="flex items-center gap-2">

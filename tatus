@@ -1,0 +1,58 @@
+[1mdiff --git a/lib/api-client.ts b/lib/api-client.ts[m
+[1mindex 6c900e6..e127251 100644[m
+[1m--- a/lib/api-client.ts[m
+[1m+++ b/lib/api-client.ts[m
+[36m@@ -23,14 +23,37 @@[m [mexport async function apiFetch<T>([m
+     headers.Authorization = `Bearer ${bearer}`;[m
+   }[m
+ [m
+[31m-  const response = await fetch(`${API_ENDPOINT}${path}`, {[m
+[31m-    method,[m
+[31m-    headers,[m
+[31m-    body: body ? JSON.stringify(body) : undefined,[m
+[31m-    credentials: "include",[m
+[31m-  });[m
+[32m+[m[32m  let response: Response;[m
+[32m+[m[32m  try {[m
+[32m+[m[32m    response = await fetch(`${API_ENDPOINT}${path}`, {[m
+[32m+[m[32m      method,[m
+[32m+[m[32m      headers,[m
+[32m+[m[32m      body: body ? JSON.stringify(body) : undefined,[m
+[32m+[m[32m      credentials: "include",[m
+[32m+[m[32m    });[m
+[32m+[m[32m  } catch (err) {[m
+[32m+[m[32m    // ネットワークエラー（接続拒否など）の場合[m
+[32m+[m[32m    const errorMessage = err instanceof Error ? err.message : "Unknown error";[m
+[32m+[m[32m    console.error(`❌ ネットワークエラー (${API_ENDPOINT}${path}):`, errorMessage);[m
+[32m+[m[32m    console.error("💡 バックエンドが起動しているか確認してください: http://localhost:8000");[m
+[32m+[m[32m    throw new Error(`バックエンドに接続できません: ${errorMessage}`);[m
+[32m+[m[32m  }[m
+ [m
+   if (!response.ok) {[m
+[32m+[m[32m    let errorDetail = null;[m
+[32m+[m[32m    try {[m
+[32m+[m[32m      const errorJson = await response.json();[m
+[32m+[m[32m      errorDetail = errorJson.detail || errorJson.message || null;[m
+[32m+[m[32m      console.error("APIエラーレスポンス:", { status: response.status, detail: errorDetail });[m
+[32m+[m[32m    } catch {[m
+[32m+[m[32m      // JSONパースに失敗した場合はテキストを取得[m
+[32m+[m[32m      try {[m
+[32m+[m[32m        const errorText = await response.text();[m
+[32m+[m[32m        console.error("APIエラーレスポンス (テキスト):", { status: response.status, text: errorText });[m
+[32m+[m[32m      } catch {[m
+[32m+[m[32m        console.error("APIエラーレスポンス (詳細不明):", { status: response.status });[m
+[32m+[m[32m      }[m
+[32m+[m[32m    }[m
+     return { data: null, status: response.status };[m
+   }[m
+ [m
+[36m@@ -38,7 +61,8 @@[m [mexport async function apiFetch<T>([m
+     const json = (await response.json()) as T;[m
+     console.log("★AIからの返却データ:", json);[m
+     return { data: json, status: response.status };[m
+[31m-  } catch {[m
+[32m+[m[32m  } catch (err) {[m
+[32m+[m[32m    console.error("JSONパースエラー:", err);[m
+     return { data: null, status: response.status };[m
+   }[m
+ }[m

@@ -22,7 +22,7 @@ export default function ChatAdvisor() {
     setInput('');
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/chat/advice`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_ENDPOINT ?? "http://localhost:8000"}/api/chat/advice`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
