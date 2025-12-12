@@ -12,6 +12,9 @@ import { apiFetch } from "@/lib/api-client";
 import { clearAccessToken } from "@/lib/auth-token";
 import { ConceptPage } from "@/app/concept/page";
 import { RevenueForecastPage } from "@/app/revenue_forecast/page";
+import { FundingPlanPage } from "@/app/funding_plan/page";
+import { OperationPage } from "@/app/operation/page";
+import { LocationPage } from "@/app/location/page";
 
 type AxisOption = {
   code: string;
@@ -188,10 +191,19 @@ function DeepQuestionsContent() {
 
             {/* axis=concept の場合は ConceptPage のコンテンツを表示 */}
             {/* axis=funds の場合は RevenueForecastPage のコンテンツを表示 */}
+            {/* axis=compliance の場合は FundingPlanPage のコンテンツを表示 */}
+            {/* axis=operation の場合は OperationPage のコンテンツを表示 */}
+            {/* axis=location の場合は LocationPage のコンテンツを表示 */}
             {selectedAxis === "concept" ? (
               <ConceptPage hideHeader={true} />
             ) : selectedAxis === "funds" ? (
               <RevenueForecastPage hideHeader={true} />
+            ) : selectedAxis === "compliance" ? (
+              <FundingPlanPage hideHeader={true} />
+            ) : selectedAxis === "operation" ? (
+              <OperationPage hideHeader={true} />
+            ) : selectedAxis === "location" ? (
+              <LocationPage hideHeader={true} />
             ) : (
               <Card className="flex flex-col gap-4 p-4">
               <div className="flex items-center gap-2">
