@@ -24,22 +24,25 @@ const LoadingBar = () => (
   </div>
 );
 
-// 収支予想データ型
+// 収支予想データ型（バックエンドのレスポンスに合わせた定義）
 type FinancialForecast = {
-  monthly_sales: number; // 月商
-  rent_budget: number; // 推奨家賃
-  cost_of_goods_rate: number; // 原価率（%）
-  labor_cost_rate: number; // 人件費率（%）
-  profit_margin: number; // 利益率（%）
-};
+  monthly_sales: number | null; // 月商
+  funds_comment_category: string; // 資金コメントカテゴリ
+  funds_comment_text: string; // 資金コメント
+} | null;
 
-// 即時返却データ型
+// 即時返却データ型（バックエンドのレスポンスに合わせた定義）
 type ImmediateResult = {
   session_id: number;
-  concept_title?: string; // 仮コンセプトタイトル（固定テキスト）
-  concept_detail?: string; // 詳細コンセプト（固定テキスト）
-  financial_forecast: FinancialForecast; // 収支予想（構造化データ）
-  industry_notes: string; // 業界の留意事項・開業における心構え
+  concept_title?: string; // 仮コンセプトタイトル
+  concept_detail?: string; // 詳細コンセプト
+  monthly_sales?: number | null; // 月商（トップレベル）
+  financial_forecast?: FinancialForecast; // 収支予想（構造化データ）
+  funds_summary?: string; // 資金サマリー
+  funds_comment_category?: string; // 資金コメントカテゴリ
+  funds_comment_text?: string; // 資金コメント
+  store_story_text?: string; // ストアストーリー
+  axis_scores?: Record<string, number>; // 軸スコア
 };
 
 export default function ResultPage() {
@@ -242,7 +245,7 @@ export default function ResultPage() {
                       項目
                     </th>
                     <th className="border border-slate-300 px-4 py-3 text-right text-sm font-semibold text-slate-700">
-                      金額・割合
+                      金額・評価
                     </th>
                   </tr>
                 </thead>
@@ -252,39 +255,7 @@ export default function ResultPage() {
                       想定月商
                     </td>
                     <td className="border border-slate-300 px-4 py-3 text-right text-sm font-semibold text-slate-900">
-                      {immediateData.financial_forecast.monthly_sales.toLocaleString()}円
-                    </td>
-                  </tr>
-                  <tr className="bg-slate-50">
-                    <td className="border border-slate-300 px-4 py-3 text-sm text-slate-800">
-                      推奨家賃（月商の10%）
-                    </td>
-                    <td className="border border-slate-300 px-4 py-3 text-right text-sm font-semibold text-slate-900">
-                      {immediateData.financial_forecast.rent_budget.toLocaleString()}円
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="border border-slate-300 px-4 py-3 text-sm text-slate-800">
-                      原価率
-                    </td>
-                    <td className="border border-slate-300 px-4 py-3 text-right text-sm font-semibold text-slate-900">
-                      {immediateData.financial_forecast.cost_of_goods_rate}%
-                    </td>
-                  </tr>
-                  <tr className="bg-slate-50">
-                    <td className="border border-slate-300 px-4 py-3 text-sm text-slate-800">
-                      人件費率
-                    </td>
-                    <td className="border border-slate-300 px-4 py-3 text-right text-sm font-semibold text-slate-900">
-                      {immediateData.financial_forecast.labor_cost_rate}%
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="border border-slate-300 px-4 py-3 text-sm text-slate-800">
-                      利益率
-                    </td>
-                    <td className="border border-slate-300 px-4 py-3 text-right text-sm font-semibold text-emerald-700">
-                      {immediateData.financial_forecast.profit_margin}%
+                      {(immediateData.monthly_sales ?? immediateData.financial_forecast?.monthly_sales ?? 0).toLocaleString()}円
                     </td>
                   </tr>
                 </tbody>
@@ -292,15 +263,29 @@ export default function ResultPage() {
             </div>
           </section>
 
-          {/* 業界の留意事項・開業における心構え（固定テキスト） */}
-          <section>
-            <h2 className="text-xl font-bold text-sky-700 mb-3">
-              業界の留意事項・開業における心構え
-            </h2>
-            <div className="text-base leading-relaxed text-slate-800 whitespace-pre-wrap">
-              {immediateData.industry_notes}
-            </div>
-          </section>
+          {/* 資金計画コメント */}
+          {(immediateData.funds_summary || immediateData.funds_comment_text || immediateData.financial_forecast?.funds_comment_text) && (
+            <section>
+              <h2 className="text-xl font-bold text-sky-700 mb-3">
+                資金計画について
+              </h2>
+              <div className="text-base leading-relaxed text-slate-800 whitespace-pre-wrap">
+                {immediateData.funds_summary || immediateData.funds_comment_text || immediateData.financial_forecast?.funds_comment_text}
+              </div>
+            </section>
+          )}
+
+          {/* ストアストーリー */}
+          {immediateData.store_story_text && (
+            <section>
+              <h2 className="text-xl font-bold text-sky-700 mb-3">
+                店舗ストーリー
+              </h2>
+              <div className="text-base leading-relaxed text-slate-800 whitespace-pre-wrap">
+                {immediateData.store_story_text}
+              </div>
+            </section>
+          )}
 
           {/* 専門家からのアドバイス（AIストリーミング） */}
           <section className="mt-12 p-6 bg-slate-50 rounded-lg">
