@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState, type ReactElement } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Megaphone, ShieldCheck, Sparkles, Timer, Wallet } from "lucide-react";
+import { Building2, ChartBar, Home, MapPin, Megaphone, Sparkles, Timer, Utensils, Wallet } from "lucide-react";
 import {
   PolarAngleAxis,
   PolarGrid,
@@ -66,26 +66,26 @@ type RadarPoint = {
 
 const AXIS_LABELS: Record<string, string> = {
   concept: "コンセプト",
+  revenue_forecast: "収支予測",
   funds: "資金計画",
-  compliance: "コンプライアンス",
-  operation: "オペレーション",
   location: "立地",
-  equipment: "設備",
-  marketing: "集客",
+  interior_exterior: "内装外装",
   menu: "メニュー",
+  operation: "オペレーション",
+  marketing: "販促",
 };
 
-const AXIS_ORDER = ["concept", "funds", "compliance", "operation", "location", "equipment", "marketing", "menu"];
+const AXIS_ORDER = ["concept", "revenue_forecast", "funds", "location", "interior_exterior", "menu", "operation", "marketing"];
 
 const AXIS_ICONS: Record<string, any> = {
   concept: Sparkles,
+  revenue_forecast: ChartBar,
   funds: Wallet,
-  compliance: ShieldCheck,
+  location: MapPin,
+  interior_exterior: Home,
+  menu: Utensils,
   operation: Timer,
-  location: Megaphone,
-  equipment: ShieldCheck,
   marketing: Megaphone,
-  menu: Wallet,
 };
 
 const PRIMARY_COLOR = "#0ea5e9";
@@ -116,6 +116,21 @@ function DashboardContent() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [hoverAxis, setHoverAxis] = useState<string | null>(null);
+
+  // バックエンドのcodeをフロントエンドのroute codeにマッピング
+  const BACKEND_TO_FRONTEND_CODE_MAP: Record<string, string> = {
+    concept: "concept",
+    revenue_forecast: "revenue_forecast",
+    funds: "funding_plan",
+    location: "location",
+    interior_exterior: "interior_exterior",
+    menu: "menu",
+    operation: "operation",
+    marketing: "marketing",
+    // 旧コード名との互換性
+    compliance: "funding_plan", // 旧complianceはfunding_planにマッピング
+    equipment: "interior_exterior", // 旧equipmentはinterior_exteriorにマッピング
+  };
 
   useEffect(() => {
     const tokenFromUrl = searchParams.get("access_token");
@@ -186,18 +201,68 @@ function DashboardContent() {
     }
   }, [data, router]);
 
+  // フロントエンドのcodeからバックエンドのcodeへの逆マッピング
+  const FRONTEND_TO_BACKEND_CODE_MAP: Record<string, string> = useMemo(() => {
+    const reverseMap: Record<string, string> = {};
+    // BACKEND_TO_FRONTEND_CODE_MAPの逆マッピングを作成
+    Object.entries(BACKEND_TO_FRONTEND_CODE_MAP).forEach(([backendCode, frontendCode]) => {
+      reverseMap[frontendCode] = backendCode;
+    });
+    // マッピングがない場合は、フロントエンドのcode = バックエンドのcodeと仮定
+    AXIS_ORDER.forEach((code) => {
+      if (!reverseMap[code]) {
+        reverseMap[code] = code;
+      }
+    });
+    return reverseMap;
+  }, []);
+
   const radarData: RadarPoint[] = useMemo(() => {
     if (!data) return [];
-    return data.axes.map((axis) => ({
-      code: axis.code,
-      label: AXIS_LABELS[axis.code] ?? axis.name ?? axis.code,
-      value: Number(axis.score.toFixed(1)),
-      okLine: data.ok_line,
-    }));
-  }, [data]);
+    // 既に使用された軸を追跡（同じ軸が複数回マッピングされないように）
+    const usedAxisIndices = new Set<number>();
+    // AXIS_ORDERをループの主体として、フロントエンドの定義を「正」とする
+    return AXIS_ORDER.map((frontendCode) => {
+      // 1. フロントエンドのcodeを、バックエンドが期待するcodeに変換
+      const backendCodeCandidate = FRONTEND_TO_BACKEND_CODE_MAP[frontendCode] || frontendCode;
+      
+      // 2. data.axesの中から、codeが一致するものを探す（まだ使用されていないもの）
+      const targetAxis = data.axes.find(
+        (a, idx) => a.code === backendCodeCandidate && !usedAxisIndices.has(idx)
+      );
+      
+      // 3. データがあれば値をセット、なければ0埋め
+      if (!targetAxis) {
+        // バックエンドにデータがない場合、フロントエンドのcodeをそのまま使用
+        return {
+          code: frontendCode,
+          label: AXIS_LABELS[frontendCode] ?? frontendCode,
+          value: 0,
+          okLine: data.ok_line,
+        };
+      }
+      
+      // 使用済みとしてマーク
+      const axisIndex = data.axes.indexOf(targetAxis);
+      if (axisIndex !== -1) {
+        usedAxisIndices.add(axisIndex);
+      }
+      
+      // バックエンドのcodeをフロントエンドのcodeに変換（マッピングがあれば）
+      const mappedFrontendCode = BACKEND_TO_FRONTEND_CODE_MAP[targetAxis.code] || frontendCode;
+      
+      return {
+        code: mappedFrontendCode,
+        label: AXIS_LABELS[frontendCode] ?? frontendCode,
+        value: Number(targetAxis.score.toFixed(1)),
+        okLine: data.ok_line,
+      };
+    });
+  }, [data, FRONTEND_TO_BACKEND_CODE_MAP]);
 
   const handleAxisClick = (axisCode: string) => {
-    router.push(`/axes/${axisCode}`);
+    // axisCodeは既にフロントエンドのcode（radarDataで変換済み）なので、そのまま使用
+    router.push(`/deep_questions?axis=${axisCode}`);
   };
 
 const renderAngleTick = (props: {
@@ -210,6 +275,8 @@ const renderAngleTick = (props: {
   radius?: number;
 }): ReactElement<SVGElement> => {
   const { payload, x, y } = props;
+  // labelで検索（payload.valueはlabel）
+  // AXIS_ORDERの順序で最初に一致するものを使用（重複を防ぐ）
   const point = radarData.find((entry) => entry.label === payload.value);
   if (!point) return <g /> as ReactElement<SVGElement>;
     const Icon = AXIS_ICONS[point.code];
