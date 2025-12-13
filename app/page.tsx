@@ -96,7 +96,7 @@ export default function Home() {
             <div className="lg:hidden flex items-center gap-3">
               <Link
                 href="/login"
-                className="bg-[#d5e5f5] text-[#234a96] text-sm font-medium px-5 py-2 rounded-full hover:bg-[#c0d8f0] transition-colors"
+                className="bg-[#d5e5f5] text-[#234a96] text-sm font-medium px-5 py-2 rounded-full hover:bg-[#c0d8f0] transition-colors whitespace-nowrap inline-flex items-center justify-center"
               >
                 ログイン
               </Link>
