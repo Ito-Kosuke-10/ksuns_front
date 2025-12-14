@@ -205,8 +205,13 @@ function DashboardContent() {
   const FRONTEND_TO_BACKEND_CODE_MAP: Record<string, string> = useMemo(() => {
     const reverseMap: Record<string, string> = {};
     // BACKEND_TO_FRONTEND_CODE_MAPの逆マッピングを作成
+    // 注意: 複数のバックエンドコードが同じフロントエンドコードにマッピングされる場合、
+    // より具体的なマッピング（interior_exterior）を優先する
     Object.entries(BACKEND_TO_FRONTEND_CODE_MAP).forEach(([backendCode, frontendCode]) => {
-      reverseMap[frontendCode] = backendCode;
+      // 既にマッピングがある場合、より具体的なコード（equipmentよりinterior_exteriorを優先）を優先
+      if (!reverseMap[frontendCode] || backendCode === frontendCode) {
+        reverseMap[frontendCode] = backendCode;
+      }
     });
     // マッピングがない場合は、フロントエンドのcode = バックエンドのcodeと仮定
     AXIS_ORDER.forEach((code) => {
@@ -214,6 +219,11 @@ function DashboardContent() {
         reverseMap[code] = code;
       }
     });
+    
+    // デバッグログ
+    console.log("[DEBUG] FRONTEND_TO_BACKEND_CODE_MAP:", reverseMap);
+    console.log("[DEBUG] interior_exterior ->", reverseMap["interior_exterior"]);
+    
     return reverseMap;
   }, []);
 
@@ -221,18 +231,45 @@ function DashboardContent() {
     if (!data) return [];
     // 既に使用された軸を追跡（同じ軸が複数回マッピングされないように）
     const usedAxisIndices = new Set<number>();
+    
+    // デバッグログ: バックエンドから受け取ったaxesのcode一覧
+    console.log("[DEBUG] data.axes codes:", data.axes.map(a => a.code));
+    console.log("[DEBUG] data.axes with scores:", data.axes.map(a => ({ code: a.code, score: a.score })));
+    
     // AXIS_ORDERをループの主体として、フロントエンドの定義を「正」とする
     return AXIS_ORDER.map((frontendCode) => {
       // 1. フロントエンドのcodeを、バックエンドが期待するcodeに変換
       const backendCodeCandidate = FRONTEND_TO_BACKEND_CODE_MAP[frontendCode] || frontendCode;
       
+      // デバッグログ（内装外装の場合のみ）
+      if (frontendCode === "interior_exterior") {
+        console.log("[DEBUG INTERIOR_EXTERIOR] frontendCode:", frontendCode);
+        console.log("[DEBUG INTERIOR_EXTERIOR] backendCodeCandidate:", backendCodeCandidate);
+        console.log("[DEBUG INTERIOR_EXTERIOR] data.axes:", data.axes);
+      }
+      
       // 2. data.axesの中から、codeが一致するものを探す（まだ使用されていないもの）
+      // 注意: バックエンドが"interior_exterior"を返す場合と"equipment"を返す場合の両方に対応
       const targetAxis = data.axes.find(
-        (a, idx) => a.code === backendCodeCandidate && !usedAxisIndices.has(idx)
+        (a, idx) => {
+          const matches = (a.code === backendCodeCandidate || 
+                          (frontendCode === "interior_exterior" && (a.code === "interior_exterior" || a.code === "equipment"))) &&
+                        !usedAxisIndices.has(idx);
+          if (frontendCode === "interior_exterior" && matches) {
+            console.log("[DEBUG INTERIOR_EXTERIOR] ✅ マッチしたaxis:", { code: a.code, score: a.score });
+          }
+          return matches;
+        }
       );
       
       // 3. データがあれば値をセット、なければ0埋め
       if (!targetAxis) {
+        // デバッグログ（内装外装の場合のみ）
+        if (frontendCode === "interior_exterior") {
+          console.log("[DEBUG INTERIOR_EXTERIOR] ❌ マッチするaxisが見つかりませんでした");
+          console.log("[DEBUG INTERIOR_EXTERIOR] backendCodeCandidate:", backendCodeCandidate);
+          console.log("[DEBUG INTERIOR_EXTERIOR] available codes:", data.axes.map(a => a.code));
+        }
         // バックエンドにデータがない場合、フロントエンドのcodeをそのまま使用
         return {
           code: frontendCode,
@@ -250,6 +287,15 @@ function DashboardContent() {
       
       // バックエンドのcodeをフロントエンドのcodeに変換（マッピングがあれば）
       const mappedFrontendCode = BACKEND_TO_FRONTEND_CODE_MAP[targetAxis.code] || frontendCode;
+      
+      // デバッグログ（内装外装の場合のみ）
+      if (frontendCode === "interior_exterior") {
+        console.log("[DEBUG INTERIOR_EXTERIOR] ✅ 最終的なRadarPoint:", {
+          code: mappedFrontendCode,
+          label: AXIS_LABELS[frontendCode],
+          value: Number(targetAxis.score.toFixed(1)),
+        });
+      }
       
       return {
         code: mappedFrontendCode,
