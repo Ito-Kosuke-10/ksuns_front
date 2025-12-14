@@ -47,10 +47,10 @@ export default function Home() {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm shadow-sm">
         <nav className="container mx-auto px-4 lg:px-8">
-          <div className="flex items-center justify-between h-20 lg:h-20">
+          <div className="flex items-center justify-between h-20 lg:h-20 gap-2">
             {/* Logo - 左端に配置 */}
-            <div className="flex items-center -my-4 -ml-4 lg:-ml-8">
-              <div className="relative h-32 w-80 md:h-36 md:w-96 lg:h-40 lg:w-[420px]">
+            <div className="flex items-center -my-4 -ml-2 sm:-ml-4 lg:-ml-8 flex-shrink min-w-0">
+              <div className="relative h-24 w-44 sm:h-32 sm:w-80 md:h-36 md:w-96 lg:h-40 lg:w-[420px]">
                 <Image
                   alt="お店開業AIロゴ"
                   src="/images/logo.png"
@@ -62,7 +62,7 @@ export default function Home() {
             </div>
 
             {/* Desktop Navigation */}
-            <div className="hidden lg:flex items-center gap-4">
+            <div className="hidden lg:flex items-center gap-4 flex-shrink-0">
               <div className="flex items-center gap-4 bg-white rounded-full shadow-[7px_7px_5px_0px_rgba(78,118,207,0.3)] px-6 py-3">
                 <button className="text-[#234a96] text-sm font-medium hover:text-[#436eae] transition-colors whitespace-nowrap">
                   5つのSTEP
@@ -93,16 +93,16 @@ export default function Home() {
             </div>
 
             {/* Mobile Menu Button & Login */}
-            <div className="lg:hidden flex items-center gap-3">
+            <div className="lg:hidden flex items-center gap-2 sm:gap-3 flex-shrink-0">
               <Link
                 href="/login"
-                className="bg-[#d5e5f5] text-[#234a96] text-sm font-medium px-5 py-2 rounded-full hover:bg-[#c0d8f0] transition-colors whitespace-nowrap inline-flex items-center justify-center"
+                className="bg-[#d5e5f5] text-[#234a96] text-xs sm:text-sm font-medium px-3 sm:px-5 py-2 rounded-full hover:bg-[#c0d8f0] transition-colors whitespace-nowrap inline-flex items-center justify-center"
               >
                 ログイン
               </Link>
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="p-2 text-[#234a96]"
+                className="p-2 text-[#234a96] flex-shrink-0"
                 aria-label="メニューを開く"
               >
                 {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
