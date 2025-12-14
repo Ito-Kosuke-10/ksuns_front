@@ -22,7 +22,7 @@ export default function SimulationLayout({
             <div className="flex flex-col items-center text-center space-y-4">
               <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-8 lg:gap-12 w-full">
                 {/* 開業AI Logo */}
-                <div className="relative h-14 w-36 md:h-16 md:w-40">
+                <div className="relative h-10 w-28 md:h-12 md:w-36">
                   <Image
                     alt="おみせ開業AIロゴ"
                     src="/images/logo-v2.png"
@@ -31,7 +31,7 @@ export default function SimulationLayout({
                   />
                 </div>
                 {/* 経済産業省 Logo */}
-                <div className="relative h-20 w-40 md:h-24 md:w-48">
+                <div className="relative h-8 w-20 md:h-10 md:w-28">
                   <Image
                     alt="経済産業省ロゴ"
                     src="/images/経済産業省.png"
@@ -40,7 +40,7 @@ export default function SimulationLayout({
                   />
                 </div>
                 {/* 中小企業庁 Logo */}
-                <div className="relative h-20 w-36 md:h-24 md:w-40">
+                <div className="relative h-8 w-16 md:h-10 md:w-20">
                   <Image
                     alt="中小企業庁ロゴ"
                     src="/images/中小企業庁.png"
