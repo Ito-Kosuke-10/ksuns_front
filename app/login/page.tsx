@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Header } from "../components/Header";
 import { apiFetch } from "@/lib/api-client";
 
@@ -33,10 +34,10 @@ export default function LoginPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-white to-[#dae4ff]">
+    <div className="min-h-screen bg-gradient-to-r from-white to-[#dae4ff] flex flex-col">
       <Header />
 
-      <main className="container mx-auto px-4 lg:px-8 py-12">
+      <main className="container mx-auto px-4 lg:px-8 py-12 flex-1">
         <div className="max-w-md mx-auto bg-white rounded-2xl shadow-lg p-8">
           {loading ? (
             <div className="text-center">
@@ -78,6 +79,49 @@ export default function LoginPage() {
           )}
         </div>
       </main>
+
+      {/* Footer */}
+      <footer className="bg-[#dee7ff] py-6 md:py-8">
+        <div className="container mx-auto px-4 lg:px-8">
+          <div className="flex flex-col items-center text-center space-y-4">
+            <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-8 lg:gap-12 w-full">
+              {/* 開業AI Logo */}
+              <div className="relative h-14 w-36 md:h-16 md:w-40">
+                <Image
+                  alt="おみせ開業AIロゴ"
+                  src="/images/logo.png"
+                  fill
+                  className="object-contain"
+                />
+              </div>
+              {/* 経済産業省 Logo */}
+              <div className="relative h-20 w-40 md:h-24 md:w-48">
+                <Image
+                  alt="経済産業省ロゴ"
+                  src="/images/経済産業省.png"
+                  fill
+                  className="object-contain"
+                />
+              </div>
+              {/* 中小企業庁 Logo */}
+              <div className="relative h-20 w-36 md:h-24 md:w-40">
+                <Image
+                  alt="中小企業庁ロゴ"
+                  src="/images/中小企業庁.png"
+                  fill
+                  className="object-contain"
+                />
+              </div>
+            </div>
+            <p className="text-[#6c82a7] text-sm md:text-base font-bold">
+              powerd by K&apos;suns
+            </p>
+            <p className="text-black text-xs">
+              2025 © K&apos;suns
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
