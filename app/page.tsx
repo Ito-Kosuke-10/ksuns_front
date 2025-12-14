@@ -50,9 +50,9 @@ export default function Home() {
           <div className="flex items-center justify-between h-20 lg:h-20 gap-2">
             {/* Logo - 左端に配置 */}
             <div className="flex items-center -my-4 -ml-2 sm:-ml-4 lg:-ml-8 flex-shrink min-w-0">
-              <div className="relative h-24 w-44 sm:h-32 sm:w-80 md:h-36 md:w-96 lg:h-40 lg:w-[420px]">
+              <div className="relative h-20 w-52 sm:h-24 sm:w-60 md:h-28 md:w-72 lg:h-32 lg:w-80">
                 <Image
-                  alt="お店開業AIロゴ"
+                  alt="おみせ開業AIロゴ"
                   src="/images/logo.png"
                   fill
                   className="object-contain object-left"
@@ -544,9 +544,9 @@ export default function Home() {
             {/* Logos Row - Text sizes normalized */}
             <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-8 lg:gap-12 w-full">
               {/* 開業AI Logo */}
-              <div className="relative h-24 w-48 md:h-28 md:w-56">
+              <div className="relative h-16 w-40 md:h-20 md:w-52">
                 <Image
-                  alt="お店開業AIロゴ"
+                  alt="おみせ開業AIロゴ"
                   src="/images/logo.png"
                   fill
                   className="object-contain"

@@ -11,9 +11,9 @@ export function Header() {
         <div className="flex items-center justify-between h-20 md:h-20 lg:h-20 py-2">
           {/* Logo - リンク付き（左端に配置） */}
           <Link href="/" className="flex items-center hover:opacity-80 transition-opacity -my-4 -ml-4 lg:-ml-8">
-            <div className="relative h-32 w-80 md:h-40 md:w-[480px] lg:h-44 lg:w-[550px]">
+            <div className="relative h-24 w-60 sm:h-28 sm:w-72 md:h-32 md:w-80 lg:h-36 lg:w-[370px]">
               <Image
-                alt="お店開業AIロゴ"
+                alt="おみせ開業AIロゴ"
                 src="/images/logo.png"
                 fill
                 className="object-contain object-left"
