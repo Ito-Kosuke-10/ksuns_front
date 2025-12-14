@@ -8,7 +8,7 @@ import ChatComponent from "@/components/ui/free_chat";
 
 export default function ChatPage() {
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900">
+    <main className="min-h-screen bg-gradient-to-r from-white to-[#dae4ff] text-slate-900">
       <div className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-10">
         
         {/* ヘッダーエリア（既存のデザインを流用） */}

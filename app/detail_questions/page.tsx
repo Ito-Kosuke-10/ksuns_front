@@ -142,7 +142,7 @@ export default function DetailQuestionsPage() {
   };
 
   return (
-    <main id="detail-questions-root" className="bg-slate-50 text-slate-900">
+    <main id="detail-questions-root" className="min-h-screen bg-gradient-to-r from-white to-[#dae4ff] text-slate-900">
       <Container id="detail-questions-container" className="flex flex-col gap-6 py-10">
         <div className="flex flex-col gap-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Detail Questions</p>

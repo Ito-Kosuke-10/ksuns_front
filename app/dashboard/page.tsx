@@ -462,7 +462,7 @@ const renderAngleTick = (props: {
 
   if (loading || !data) {
     return (
-      <main id="dashboard-root" className="bg-slate-50 text-slate-900">
+      <main id="dashboard-root" className="min-h-screen bg-gradient-to-r from-white to-[#dae4ff] text-slate-900">
         <Container id="dashboard-container" className="flex flex-col gap-6 py-10">
           <div className="flex flex-col gap-2">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
@@ -490,7 +490,7 @@ const renderAngleTick = (props: {
   const deepQuestionAxis = data.next_focus?.axis_code;
 
   return (
-    <main id="dashboard-root" className="bg-slate-50 text-slate-900">
+    <main id="dashboard-root" className="min-h-screen bg-gradient-to-r from-white to-[#dae4ff] text-slate-900">
       <Container id="dashboard-container" className="flex flex-col gap-6 py-10">
         <div className="flex flex-col gap-2">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
