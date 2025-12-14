@@ -49,8 +49,8 @@ export default function Home() {
         <nav className="container mx-auto px-4 lg:px-8">
           <div className="flex items-center justify-between h-20 lg:h-20 gap-2">
             {/* Logo - 左端に配置 */}
-            <div className="flex items-center -my-4 -ml-2 sm:-ml-4 lg:-ml-8 flex-shrink min-w-0">
-              <div className="relative h-20 w-52 sm:h-24 sm:w-60 md:h-28 md:w-72 lg:h-32 lg:w-80">
+            <div className="flex items-center flex-shrink min-w-0">
+              <div className="relative h-8 w-20 sm:h-9 sm:w-24 md:h-10 md:w-28">
                 <Image
                   alt="おみせ開業AIロゴ"
                   src="/images/logo-v2.png"
@@ -544,7 +544,7 @@ export default function Home() {
             {/* Logos Row - Text sizes normalized */}
             <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-8 lg:gap-12 w-full">
               {/* 開業AI Logo */}
-              <div className="relative h-16 w-40 md:h-20 md:w-52">
+              <div className="relative h-7 w-20 md:h-8 md:w-24">
                 <Image
                   alt="おみせ開業AIロゴ"
                   src="/images/logo-v2.png"
@@ -554,7 +554,7 @@ export default function Home() {
               </div>
 
               {/* 経済産業省 Logo */}
-              <div className="relative h-24 w-48 md:h-28 md:w-56">
+              <div className="relative h-6 w-16 md:h-7 md:w-20">
                 <Image
                   alt="経済産業省ロゴ"
                   src="/images/経済産業省.png"
@@ -564,7 +564,7 @@ export default function Home() {
               </div>
 
               {/* 中小企業庁 Logo */}
-              <div className="relative h-24 w-40 md:h-28 md:w-44">
+              <div className="relative h-6 w-12 md:h-7 md:w-16">
                 <Image
                   alt="中小企業庁ロゴ"
                   src="/images/中小企業庁.png"
