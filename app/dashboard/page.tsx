@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState, type ReactElement } from "react";
+import { Suspense, useEffect, useMemo, useState, type ReactElement, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Building2, ChartBar, Home, MapPin, Megaphone, Sparkles, Timer, Utensils, Wallet } from "lucide-react";
 import {
@@ -18,7 +18,7 @@ import { Card } from "@/components/ui/card";
 import { Container } from "@/components/ui/container";
 import { apiFetch } from "@/lib/api-client";
 import { clearAccessToken, setAccessToken } from "@/lib/auth-token";
-import { getBrowserStorage } from "@/lib/storage";　// からちゃん追加部分 マイページ作成部分に対応
+import { getBrowserStorage } from "@/lib/storage"; // からちゃん追加部分 マイページ作成部分に対応
 
 type AxisSummary = {
   code: string;
@@ -116,9 +116,82 @@ function DashboardContent() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [hoverAxis, setHoverAxis] = useState<string | null>(null);
+  // ▼追加：プランUI用のlocalStorage管理
+  type LocalPlan = { id: string; label: string; created_at: string };
+
+  const PLANS_KEY = "ksuns_plans";
+  const SELECTED_PLAN_KEY = "ksuns_selected_plan_id";
+  const SIMPLE_FLOW_KEY = "ksuns_simple_flow";
+
+  const storage = useMemo(() => getBrowserStorage(), []);
+
+  const [plans, setPlans] = useState<LocalPlan[]>([]);
+  const [selectedPlanId, setSelectedPlanId] = useState<string>("");
+
+  const loadPlans = useCallback(() => {
+    if (!storage) return;
+    const rawPlans = storage.getItem(PLANS_KEY);
+    const parsed: LocalPlan[] = rawPlans ? JSON.parse(rawPlans) : [];
+    setPlans(parsed);
+
+    const selected = storage.getItem(SELECTED_PLAN_KEY) || "";
+    setSelectedPlanId(selected);
+  }, [storage]);
+
+  useEffect(() => {
+    loadPlans();
+  }, [loadPlans]);
+
+  const persistPlans = (next: LocalPlan[], nextSelectedId?: string) => {
+    if (!storage) return;
+    storage.setItem(PLANS_KEY, JSON.stringify(next));
+    if (nextSelectedId) storage.setItem(SELECTED_PLAN_KEY, nextSelectedId);
+  };
+
+  const startNewPlanFlow = () => {
+    if (!storage) return;
+
+    const id =
+      typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `plan-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+    const now = new Date();
+    const label = `プラン ${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, "0")}/${String(
+      now.getDate()
+    ).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+    const nextPlan: LocalPlan = { id, label, created_at: now.toISOString() };
+    const nextPlans = [nextPlan, ...plans];
+
+    persistPlans(nextPlans, id);
+    setPlans(nextPlans);
+    setSelectedPlanId(id);
+
+    // 「ダッシュボードから新規プラン」フローの印
+    storage.setItem(SIMPLE_FLOW_KEY, "new_plan");
+
+    // 簡易シミュへ
+    router.push("/simple_simulation/questions/1");
+  };
+
+  const handlePlanSelectChange = (value: string) => {
+    if (!storage) return;
+
+    if (value === "__new__") {
+      startNewPlanFlow();
+      return;
+    }
+
+    // 既存プランを選んだ時（今回は“選択状態の保存だけ”）
+    storage.setItem(SELECTED_PLAN_KEY, value);
+    setSelectedPlanId(value);
+  };
+  // ▲追加ここまで
 
   // バックエンドのcodeをフロントエンドのroute codeにマッピング
   const BACKEND_TO_FRONTEND_CODE_MAP: Record<string, string> = {
+
     concept: "concept",
     revenue_forecast: "revenue_forecast",
     funds: "funding_plan",
@@ -426,12 +499,36 @@ const renderAngleTick = (props: {
               <h1 className="text-2xl font-semibold leading-8">開業準備の現在地</h1>
               <p className="text-sm text-slate-600">コンセプトと準備度レーダーの概要を確認できます。</p>
             </div>
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <div className="flex flex-col items-end gap-2 text-sm font-semibold text-slate-700">
               {data.user_email ? (
                 <span className="rounded-full bg-slate-100 px-3 py-2">{data.user_email}</span>
               ) : (
                 <span className="rounded-full bg-slate-100 px-3 py-2">未ログイン</span>
               )}
+
+              {/* ▼追加：プランUI */}
+              {plans.length >= 2 ? (
+                <select
+                  value={selectedPlanId || ""}
+                  onChange={(e) => handlePlanSelectChange(e.target.value)}
+                  className="h-10 rounded-full border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 hover:border-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+                >
+                  {!selectedPlanId ? <option value="">プランを選択</option> : null}
+
+                  {plans.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.label}
+                    </option>
+                  ))}
+
+                  <option value="__new__">＋ 新規プランを検討する</option>
+                </select>
+              ) : (
+                <Button variant="secondary" onClick={startNewPlanFlow} className="px-4 py-2">
+                  新規プランを検討する
+                </Button>
+              )}
+              {/* ▲追加：プランUI */}
             </div>
           </div>
           <div className="grid gap-4 lg:grid-cols-[1fr_2fr]">
