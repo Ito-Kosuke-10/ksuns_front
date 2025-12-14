@@ -25,7 +25,7 @@ export default function SimulationLayout({
                 <div className="relative h-14 w-36 md:h-16 md:w-40">
                   <Image
                     alt="おみせ開業AIロゴ"
-                    src="/images/logo.png"
+                    src="/images/logo-v2.png"
                     fill
                     className="object-contain"
                   />

@@ -14,7 +14,7 @@ export function Header() {
             <div className="relative h-24 w-60 sm:h-28 sm:w-72 md:h-32 md:w-80 lg:h-36 lg:w-[370px]">
               <Image
                 alt="おみせ開業AIロゴ"
-                src="/images/logo.png"
+                src="/images/logo-v2.png"
                 fill
                 className="object-contain object-left"
                 priority
