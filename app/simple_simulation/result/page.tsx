@@ -26,7 +26,12 @@ const LoadingBar = () => (
 
 // 収支予想データ型（バックエンドのレスポンスに合わせた定義）
 type FinancialForecast = {
-  monthly_sales: number | null; // 月商
+  monthly_sales: number | null; // 想定月商
+  estimated_rent: number | null; // 推定家賃
+  cost_ratio: number | null; // 原価率 (%)
+  labor_cost_ratio: number | null; // 人件費率 (%)
+  profit_ratio: number | null; // 利益率 (%)
+  break_even_sales: number | null; // 損益分岐売上
   funds_comment_category: string; // 資金コメントカテゴリ
   funds_comment_text: string; // 資金コメント
 } | null;
@@ -34,15 +39,23 @@ type FinancialForecast = {
 // 即時返却データ型（バックエンドのレスポンスに合わせた定義）
 type ImmediateResult = {
   session_id: number;
-  concept_title?: string; // 仮コンセプトタイトル
-  concept_detail?: string; // 詳細コンセプト
-  monthly_sales?: number | null; // 月商（トップレベル）
-  financial_forecast?: FinancialForecast; // 収支予想（構造化データ）
-  funds_summary?: string; // 資金サマリー
-  funds_comment_category?: string; // 資金コメントカテゴリ
-  funds_comment_text?: string; // 資金コメント
-  store_story_text?: string; // ストアストーリー
   axis_scores?: Record<string, number>; // 軸スコア
+
+  // 新しいフィールド
+  concept_name?: string; // コンセプト名（例: "駅近のサラリーマン向け大衆居酒屋"）
+  concept_sub_comment?: string; // サブコメント（20-30文字）
+  opening_notes?: string; // 開店にあたっての留意事項
+
+  financial_forecast?: FinancialForecast; // 収支予想（構造化データ）
+
+  // 後方互換性のため維持（非推奨）
+  concept_title?: string;
+  concept_detail?: string;
+  monthly_sales?: number | null;
+  funds_summary?: string;
+  funds_comment_category?: string;
+  funds_comment_text?: string;
+  store_story_text?: string;
 };
 
 export default function ResultPage() {
@@ -119,10 +132,10 @@ export default function ResultPage() {
       if (data) {
         console.log("[Result] Received immediate data:", data);
         console.log("[Result] Session ID:", data.session_id);
-        console.log("[Result] Session ID type:", typeof data.session_id);
+        console.log("[Result] Concept name:", data.concept_name);
+        console.log("[Result] Concept sub comment:", data.concept_sub_comment);
         console.log("[Result] Financial forecast:", data.financial_forecast);
-        console.log("[Result] Concept title:", data.concept_title);
-        console.log("[Result] Concept detail:", data.concept_detail);
+        console.log("[Result] Opening notes:", data.opening_notes);
         setImmediateData(data);
       } else {
         setImmediateError(
@@ -213,21 +226,19 @@ export default function ResultPage() {
         </div>
       ) : immediateData ? (
         <>
-          {/* コンセプト（固定テキスト） */}
-          {(immediateData.concept_title || immediateData.concept_detail) && (
+          {/* コンセプト */}
+          {(immediateData.concept_name || immediateData.concept_title) && (
             <section>
               <h2 className="text-xl font-bold text-sky-700 mb-3">
                 コンセプト
               </h2>
-              {immediateData.concept_title && (
-                <h3 className="text-2xl font-bold text-slate-900 mb-2">
-                  {immediateData.concept_title}
-                </h3>
-              )}
-              {immediateData.concept_detail && (
-                <div className="text-base leading-relaxed text-slate-800 whitespace-pre-wrap">
-                  {immediateData.concept_detail}
-                </div>
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">
+                {immediateData.concept_name || immediateData.concept_title}
+              </h3>
+              {(immediateData.concept_sub_comment || immediateData.concept_detail) && (
+                <p className="text-base leading-relaxed text-slate-600">
+                  {immediateData.concept_sub_comment || immediateData.concept_detail}
+                </p>
               )}
             </section>
           )}
@@ -245,7 +256,7 @@ export default function ResultPage() {
                       項目
                     </th>
                     <th className="border border-slate-300 px-4 py-3 text-right text-sm font-semibold text-slate-700">
-                      金額・評価
+                      金額・割合
                     </th>
                   </tr>
                 </thead>
@@ -255,7 +266,47 @@ export default function ResultPage() {
                       想定月商
                     </td>
                     <td className="border border-slate-300 px-4 py-3 text-right text-sm font-semibold text-slate-900">
-                      {(immediateData.monthly_sales ?? immediateData.financial_forecast?.monthly_sales ?? 0).toLocaleString()}円
+                      ¥{immediateData.financial_forecast?.monthly_sales?.toLocaleString() ?? '-'}
+                    </td>
+                  </tr>
+                  <tr className="bg-slate-50">
+                    <td className="border border-slate-300 px-4 py-3 text-sm text-slate-800">
+                      推定家賃
+                    </td>
+                    <td className="border border-slate-300 px-4 py-3 text-right text-sm font-semibold text-slate-900">
+                      ¥{immediateData.financial_forecast?.estimated_rent?.toLocaleString() ?? '-'}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="border border-slate-300 px-4 py-3 text-sm text-slate-800">
+                      原価率
+                    </td>
+                    <td className="border border-slate-300 px-4 py-3 text-right text-sm font-semibold text-slate-900">
+                      {immediateData.financial_forecast?.cost_ratio ?? '-'}%
+                    </td>
+                  </tr>
+                  <tr className="bg-slate-50">
+                    <td className="border border-slate-300 px-4 py-3 text-sm text-slate-800">
+                      人件費率
+                    </td>
+                    <td className="border border-slate-300 px-4 py-3 text-right text-sm font-semibold text-slate-900">
+                      {immediateData.financial_forecast?.labor_cost_ratio ?? '-'}%
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="border border-slate-300 px-4 py-3 text-sm text-slate-800">
+                      利益率
+                    </td>
+                    <td className="border border-slate-300 px-4 py-3 text-right text-sm font-semibold text-emerald-700">
+                      {immediateData.financial_forecast?.profit_ratio ?? '-'}%
+                    </td>
+                  </tr>
+                  <tr className="bg-slate-50">
+                    <td className="border border-slate-300 px-4 py-3 text-sm text-slate-800">
+                      損益分岐売上
+                    </td>
+                    <td className="border border-slate-300 px-4 py-3 text-right text-sm font-semibold text-slate-900">
+                      ¥{immediateData.financial_forecast?.break_even_sales?.toLocaleString() ?? '-'}
                     </td>
                   </tr>
                 </tbody>
@@ -263,34 +314,22 @@ export default function ResultPage() {
             </div>
           </section>
 
-          {/* 資金計画コメント */}
-          {(immediateData.funds_summary || immediateData.funds_comment_text || immediateData.financial_forecast?.funds_comment_text) && (
+          {/* 開店にあたっての留意事項 */}
+          {immediateData.opening_notes && (
             <section>
               <h2 className="text-xl font-bold text-sky-700 mb-3">
-                資金計画について
+                開店にあたっての留意事項
               </h2>
               <div className="text-base leading-relaxed text-slate-800 whitespace-pre-wrap">
-                {immediateData.funds_summary || immediateData.funds_comment_text || immediateData.financial_forecast?.funds_comment_text}
+                {immediateData.opening_notes}
               </div>
             </section>
           )}
 
-          {/* ストアストーリー */}
-          {immediateData.store_story_text && (
-            <section>
-              <h2 className="text-xl font-bold text-sky-700 mb-3">
-                店舗ストーリー
-              </h2>
-              <div className="text-base leading-relaxed text-slate-800 whitespace-pre-wrap">
-                {immediateData.store_story_text}
-              </div>
-            </section>
-          )}
-
-          {/* 専門家からのアドバイス（AIストリーミング） */}
+          {/* AI専門家からのアドバイス（AIストリーミング） */}
           <section className="mt-12 p-6 bg-slate-50 rounded-lg">
             <h2 className="text-2xl font-bold text-slate-900 mb-6">
-              専門家からのアドバイス
+              AI専門家からのアドバイス
             </h2>
 
             {/* 立地アドバイス */}
