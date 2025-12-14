@@ -226,20 +226,15 @@ export default function ResultPage() {
         </div>
       ) : immediateData ? (
         <>
-          {/* コンセプト */}
-          {(immediateData.concept_name || immediateData.concept_title) && (
+          {/* コンセプト（concept_sub_commentを一文で表示） */}
+          {immediateData.concept_sub_comment && (
             <section>
               <h2 className="text-xl font-bold text-sky-700 mb-3">
                 コンセプト
               </h2>
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">
-                {immediateData.concept_name || immediateData.concept_title}
+              <h3 className="text-2xl font-bold text-slate-900">
+                {immediateData.concept_sub_comment}
               </h3>
-              {(immediateData.concept_sub_comment || immediateData.concept_detail) && (
-                <p className="text-base leading-relaxed text-slate-600">
-                  {immediateData.concept_sub_comment || immediateData.concept_detail}
-                </p>
-              )}
             </section>
           )}
 
@@ -271,7 +266,8 @@ export default function ResultPage() {
                   </tr>
                   <tr className="bg-slate-50">
                     <td className="border border-slate-300 px-4 py-3 text-sm text-slate-800">
-                      推定家賃
+                      <div>家賃上限（目安）</div>
+                      <div className="text-xs text-slate-500 mt-1">※この業態・利益率を前提とした目安です</div>
                     </td>
                     <td className="border border-slate-300 px-4 py-3 text-right text-sm font-semibold text-slate-900">
                       ¥{immediateData.financial_forecast?.estimated_rent?.toLocaleString() ?? '-'}
@@ -295,9 +291,9 @@ export default function ResultPage() {
                   </tr>
                   <tr>
                     <td className="border border-slate-300 px-4 py-3 text-sm text-slate-800">
-                      利益率
+                      利益率（計画）
                     </td>
-                    <td className="border border-slate-300 px-4 py-3 text-right text-sm font-semibold text-emerald-700">
+                    <td className="border border-slate-300 px-4 py-3 text-right text-sm font-semibold text-slate-900">
                       {immediateData.financial_forecast?.profit_ratio ?? '-'}%
                     </td>
                   </tr>
@@ -313,18 +309,6 @@ export default function ResultPage() {
               </table>
             </div>
           </section>
-
-          {/* 開店にあたっての留意事項 */}
-          {immediateData.opening_notes && (
-            <section>
-              <h2 className="text-xl font-bold text-sky-700 mb-3">
-                開店にあたっての留意事項
-              </h2>
-              <div className="text-base leading-relaxed text-slate-800 whitespace-pre-wrap">
-                {immediateData.opening_notes}
-              </div>
-            </section>
-          )}
 
           {/* AI専門家からのアドバイス（AIストリーミング） */}
           <section className="mt-12 p-6 bg-slate-50 rounded-lg">
