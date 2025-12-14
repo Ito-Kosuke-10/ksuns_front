@@ -111,22 +111,34 @@ export default function DetailQuestionsPage() {
     }
     setSaving(true);
     setError(null);
-    const { data, status } = await apiFetch<SaveResponse>("/detail_questions", {
-      method: "PUT",
-      body: { answers },
-    });
-    if (status === 401) {
-      clearAccessToken();
-      router.replace("/login");
-      return;
+    try {
+      const { data, status } = await apiFetch<SaveResponse>("/detail_questions", {
+        method: "PUT",
+        body: { answers },
+      });
+      if (status === 401) {
+        clearAccessToken();
+        router.replace("/login");
+        return;
+      }
+      if (status >= 400) {
+        setError(`保存に失敗しました。ステータス: ${status}`);
+        setSaving(false);
+        return;
+      }
+      if (data) {
+        setProgress(data.progress);
+        // ダッシュボードに遷移
+        router.push("/dashboard");
+      } else {
+        setError("保存に失敗しました。時間をおいて再試行してください。");
+      }
+    } catch (err) {
+      console.error("保存エラー:", err);
+      setError(`保存に失敗しました: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setSaving(false);
     }
-    if (data) {
-      setProgress(data.progress);
-      router.push("/dashboard");
-    } else {
-      setError("保存に失敗しました。時間をおいて再試行してください。");
-    }
-    setSaving(false);
   };
 
   return (
