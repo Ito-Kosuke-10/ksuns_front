@@ -39,7 +39,7 @@ export default function DeepQuestionsPage() {
   return (
     <Suspense
       fallback={
-        <main className="bg-slate-50 text-slate-900">
+        <main className="min-h-screen bg-gradient-to-r from-white to-[#dae4ff] text-slate-900">
           <Container className="py-10">
             <Alert>読み込み中...</Alert>
           </Container>
@@ -128,7 +128,7 @@ function DeepQuestionsContent() {
   const messages = useMemo(() => thread?.messages ?? [], [thread]);
 
   return (
-    <main id="deep-questions-root" className="bg-slate-50 text-slate-900">
+    <main id="deep-questions-root" className="min-h-screen bg-gradient-to-r from-white to-[#dae4ff] text-slate-900">
       <Container id="deep-questions-container" className="flex flex-col gap-6 py-10">
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-3">
