@@ -114,3 +114,5 @@ export function clampSliderValue(value: number): number {
   return Math.round(clamped / PRICE_SLIDER_CONFIG.step) * PRICE_SLIDER_CONFIG.step;
 }
 
+
+

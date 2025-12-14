@@ -66,6 +66,16 @@ export default function ResultPage() {
   const [immediateError, setImmediateError] = useState<string | null>(null);
   const [authUrl, setAuthUrl] = useState<string | null>(null);
   const [guestToken, setGuestToken] = useState<string | null>(null);
+  // ▼追加：ダッシュボード起点の“新規プラン”フロー判定
+  const SIMPLE_FLOW_KEY = "ksuns_simple_flow";
+  const [isNewPlanFlow, setIsNewPlanFlow] = useState(false);
+
+  useEffect(() => {
+    const storage = getBrowserStorage();
+    if (!storage) return;
+    setIsNewPlanFlow(storage.getItem(SIMPLE_FLOW_KEY) === "new_plan");
+  }, []);
+  // ▲追加ここまで
 
   // ゲストトークン生成
   useEffect(() => {
@@ -202,6 +212,13 @@ export default function ResultPage() {
     resetAnswers();
     router.push("/simple_simulation/questions/1");
   };
+  // ▼追加：このプランで詳細シミュへ
+  const handleGoDetailQuestions = () => {
+    const storage = getBrowserStorage();
+    if (storage) storage.removeItem(SIMPLE_FLOW_KEY); // 詳細へ進んだらフロー解除（好みでOK）
+    router.push("/detail_questions");
+  };
+  // ▲追加ここまで
 
   return (
     <div className="flex flex-1 flex-col gap-8 py-4">
@@ -395,29 +412,56 @@ export default function ResultPage() {
 
       {/* アクションボタン */}
       <section className="mt-auto flex flex-wrap gap-3 pt-4">
-        <button
-          type="button"
-          className="inline-flex items-center justify-center rounded-full bg-sky-600 px-6 py-3 text-base font-semibold text-white transition hover:bg-sky-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
-          onClick={handleCreateMyPage}
-          disabled={immediateLoading}
-        >
-          この結果でマイページを作成する
-        </button>
-        <button
-          type="button"
-          onClick={handleRestart}
-          className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-6 py-3 text-base font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
-        >
-          もう一度診断する
-        </button>
-        <button
-          type="button"
-          onClick={() => router.push("/")}
-          className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-6 py-3 text-base font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
-        >
-          今回は登録せず終える
-        </button>
+        {isNewPlanFlow ? (
+          <>
+            <button
+              type="button"
+              onClick={handleRestart}
+              className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-6 py-3 text-base font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+              disabled={immediateLoading}
+            >
+              もう一度診断する
+            </button>
+
+            <button
+              type="button"
+              onClick={handleGoDetailQuestions}
+              className="inline-flex items-center justify-center rounded-full bg-sky-600 px-6 py-3 text-base font-semibold text-white transition hover:bg-sky-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+              disabled={immediateLoading}
+            >
+              このプランで詳細シミュレーションに進む
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              className="inline-flex items-center justify-center rounded-full bg-sky-600 px-6 py-3 text-base font-semibold text-white transition hover:bg-sky-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+              onClick={handleCreateMyPage}
+              disabled={immediateLoading}
+            >
+              この結果でマイページを作成する
+            </button>
+
+            <button
+              type="button"
+              onClick={handleRestart}
+              className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-6 py-3 text-base font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+            >
+              もう一度診断する
+            </button>
+
+            <button
+              type="button"
+              onClick={() => router.push("/")}
+              className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-6 py-3 text-base font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+            >
+              今回は登録せず終える
+            </button>
+          </>
+        )}
       </section>
+
     </div>
   );
 }

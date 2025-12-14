@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState, type ReactElement } from "react";
+import { Suspense, useEffect, useMemo, useState, type ReactElement, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Megaphone, ShieldCheck, Sparkles, Timer, Wallet } from "lucide-react";
+import { Building2, ChartBar, Home, MapPin, Megaphone, Sparkles, Timer, Utensils, Wallet } from "lucide-react";
 import {
   PolarAngleAxis,
   PolarGrid,
@@ -18,7 +18,7 @@ import { Card } from "@/components/ui/card";
 import { Container } from "@/components/ui/container";
 import { apiFetch } from "@/lib/api-client";
 import { clearAccessToken, setAccessToken } from "@/lib/auth-token";
-import { getBrowserStorage } from "@/lib/storage";　// からちゃん追加部分 マイページ作成部分に対応
+import { getBrowserStorage } from "@/lib/storage"; // からちゃん追加部分 マイページ作成部分に対応
 
 type AxisSummary = {
   code: string;
@@ -66,26 +66,26 @@ type RadarPoint = {
 
 const AXIS_LABELS: Record<string, string> = {
   concept: "コンセプト",
+  revenue_forecast: "収支予測",
   funds: "資金計画",
-  compliance: "コンプライアンス",
-  operation: "オペレーション",
   location: "立地",
-  equipment: "設備",
-  marketing: "集客",
+  interior_exterior: "内装外装",
   menu: "メニュー",
+  operation: "オペレーション",
+  marketing: "販促",
 };
 
-const AXIS_ORDER = ["concept", "funds", "compliance", "operation", "location", "equipment", "marketing", "menu"];
+const AXIS_ORDER = ["concept", "revenue_forecast", "funds", "location", "interior_exterior", "menu", "operation", "marketing"];
 
 const AXIS_ICONS: Record<string, any> = {
   concept: Sparkles,
+  revenue_forecast: ChartBar,
   funds: Wallet,
-  compliance: ShieldCheck,
+  location: MapPin,
+  interior_exterior: Home,
+  menu: Utensils,
   operation: Timer,
-  location: Megaphone,
-  equipment: ShieldCheck,
   marketing: Megaphone,
-  menu: Wallet,
 };
 
 const PRIMARY_COLOR = "#0ea5e9";
@@ -116,6 +116,94 @@ function DashboardContent() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [hoverAxis, setHoverAxis] = useState<string | null>(null);
+  // ▼追加：プランUI用のlocalStorage管理
+  type LocalPlan = { id: string; label: string; created_at: string };
+
+  const PLANS_KEY = "ksuns_plans";
+  const SELECTED_PLAN_KEY = "ksuns_selected_plan_id";
+  const SIMPLE_FLOW_KEY = "ksuns_simple_flow";
+
+  const storage = useMemo(() => getBrowserStorage(), []);
+
+  const [plans, setPlans] = useState<LocalPlan[]>([]);
+  const [selectedPlanId, setSelectedPlanId] = useState<string>("");
+
+  const loadPlans = useCallback(() => {
+    if (!storage) return;
+    const rawPlans = storage.getItem(PLANS_KEY);
+    const parsed: LocalPlan[] = rawPlans ? JSON.parse(rawPlans) : [];
+    setPlans(parsed);
+
+    const selected = storage.getItem(SELECTED_PLAN_KEY) || "";
+    setSelectedPlanId(selected);
+  }, [storage]);
+
+  useEffect(() => {
+    loadPlans();
+  }, [loadPlans]);
+
+  const persistPlans = (next: LocalPlan[], nextSelectedId?: string) => {
+    if (!storage) return;
+    storage.setItem(PLANS_KEY, JSON.stringify(next));
+    if (nextSelectedId) storage.setItem(SELECTED_PLAN_KEY, nextSelectedId);
+  };
+
+  const startNewPlanFlow = () => {
+    if (!storage) return;
+
+    const id =
+      typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `plan-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+    const now = new Date();
+    const label = `プラン ${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, "0")}/${String(
+      now.getDate()
+    ).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+    const nextPlan: LocalPlan = { id, label, created_at: now.toISOString() };
+    const nextPlans = [nextPlan, ...plans];
+
+    persistPlans(nextPlans, id);
+    setPlans(nextPlans);
+    setSelectedPlanId(id);
+
+    // 「ダッシュボードから新規プラン」フローの印
+    storage.setItem(SIMPLE_FLOW_KEY, "new_plan");
+
+    // 簡易シミュへ
+    router.push("/simple_simulation/questions/1");
+  };
+
+  const handlePlanSelectChange = (value: string) => {
+    if (!storage) return;
+
+    if (value === "__new__") {
+      startNewPlanFlow();
+      return;
+    }
+
+    // 既存プランを選んだ時（今回は“選択状態の保存だけ”）
+    storage.setItem(SELECTED_PLAN_KEY, value);
+    setSelectedPlanId(value);
+  };
+  // ▲追加ここまで
+
+  // バックエンドのcodeをフロントエンドのroute codeにマッピング
+  const BACKEND_TO_FRONTEND_CODE_MAP: Record<string, string> = {
+
+    concept: "concept",
+    revenue_forecast: "revenue_forecast",
+    funds: "funding_plan",
+    location: "location",
+    interior_exterior: "interior_exterior",
+    menu: "menu",
+    operation: "operation",
+    marketing: "marketing",
+    // 旧コード名との互換性
+    compliance: "funding_plan", // 旧complianceはfunding_planにマッピング
+    equipment: "interior_exterior", // 旧equipmentはinterior_exteriorにマッピング
+  };
 
   useEffect(() => {
     const tokenFromUrl = searchParams.get("access_token");
@@ -186,18 +274,114 @@ function DashboardContent() {
     }
   }, [data, router]);
 
+  // フロントエンドのcodeからバックエンドのcodeへの逆マッピング
+  const FRONTEND_TO_BACKEND_CODE_MAP: Record<string, string> = useMemo(() => {
+    const reverseMap: Record<string, string> = {};
+    // BACKEND_TO_FRONTEND_CODE_MAPの逆マッピングを作成
+    // 注意: 複数のバックエンドコードが同じフロントエンドコードにマッピングされる場合、
+    // より具体的なマッピング（interior_exterior）を優先する
+    Object.entries(BACKEND_TO_FRONTEND_CODE_MAP).forEach(([backendCode, frontendCode]) => {
+      // 既にマッピングがある場合、より具体的なコード（equipmentよりinterior_exteriorを優先）を優先
+      if (!reverseMap[frontendCode] || backendCode === frontendCode) {
+        reverseMap[frontendCode] = backendCode;
+      }
+    });
+    // マッピングがない場合は、フロントエンドのcode = バックエンドのcodeと仮定
+    AXIS_ORDER.forEach((code) => {
+      if (!reverseMap[code]) {
+        reverseMap[code] = code;
+      }
+    });
+    
+    // デバッグログ
+    console.log("[DEBUG] FRONTEND_TO_BACKEND_CODE_MAP:", reverseMap);
+    console.log("[DEBUG] interior_exterior ->", reverseMap["interior_exterior"]);
+    
+    return reverseMap;
+  }, []);
+
   const radarData: RadarPoint[] = useMemo(() => {
     if (!data) return [];
-    return data.axes.map((axis) => ({
-      code: axis.code,
-      label: AXIS_LABELS[axis.code] ?? axis.name ?? axis.code,
-      value: Number(axis.score.toFixed(1)),
-      okLine: data.ok_line,
-    }));
-  }, [data]);
+    // 既に使用された軸を追跡（同じ軸が複数回マッピングされないように）
+    const usedAxisIndices = new Set<number>();
+    
+    // デバッグログ: バックエンドから受け取ったaxesのcode一覧
+    console.log("[DEBUG] data.axes codes:", data.axes.map(a => a.code));
+    console.log("[DEBUG] data.axes with scores:", data.axes.map(a => ({ code: a.code, score: a.score })));
+    
+    // AXIS_ORDERをループの主体として、フロントエンドの定義を「正」とする
+    return AXIS_ORDER.map((frontendCode) => {
+      // 1. フロントエンドのcodeを、バックエンドが期待するcodeに変換
+      const backendCodeCandidate = FRONTEND_TO_BACKEND_CODE_MAP[frontendCode] || frontendCode;
+      
+      // デバッグログ（内装外装の場合のみ）
+      if (frontendCode === "interior_exterior") {
+        console.log("[DEBUG INTERIOR_EXTERIOR] frontendCode:", frontendCode);
+        console.log("[DEBUG INTERIOR_EXTERIOR] backendCodeCandidate:", backendCodeCandidate);
+        console.log("[DEBUG INTERIOR_EXTERIOR] data.axes:", data.axes);
+      }
+      
+      // 2. data.axesの中から、codeが一致するものを探す（まだ使用されていないもの）
+      // 注意: バックエンドが"interior_exterior"を返す場合と"equipment"を返す場合の両方に対応
+      const targetAxis = data.axes.find(
+        (a, idx) => {
+          const matches = (a.code === backendCodeCandidate || 
+                          (frontendCode === "interior_exterior" && (a.code === "interior_exterior" || a.code === "equipment"))) &&
+                        !usedAxisIndices.has(idx);
+          if (frontendCode === "interior_exterior" && matches) {
+            console.log("[DEBUG INTERIOR_EXTERIOR] ✅ マッチしたaxis:", { code: a.code, score: a.score });
+          }
+          return matches;
+        }
+      );
+      
+      // 3. データがあれば値をセット、なければ0埋め
+      if (!targetAxis) {
+        // デバッグログ（内装外装の場合のみ）
+        if (frontendCode === "interior_exterior") {
+          console.log("[DEBUG INTERIOR_EXTERIOR] ❌ マッチするaxisが見つかりませんでした");
+          console.log("[DEBUG INTERIOR_EXTERIOR] backendCodeCandidate:", backendCodeCandidate);
+          console.log("[DEBUG INTERIOR_EXTERIOR] available codes:", data.axes.map(a => a.code));
+        }
+        // バックエンドにデータがない場合、フロントエンドのcodeをそのまま使用
+        return {
+          code: frontendCode,
+          label: AXIS_LABELS[frontendCode] ?? frontendCode,
+          value: 0,
+          okLine: data.ok_line,
+        };
+      }
+      
+      // 使用済みとしてマーク
+      const axisIndex = data.axes.indexOf(targetAxis);
+      if (axisIndex !== -1) {
+        usedAxisIndices.add(axisIndex);
+      }
+      
+      // バックエンドのcodeをフロントエンドのcodeに変換（マッピングがあれば）
+      const mappedFrontendCode = BACKEND_TO_FRONTEND_CODE_MAP[targetAxis.code] || frontendCode;
+      
+      // デバッグログ（内装外装の場合のみ）
+      if (frontendCode === "interior_exterior") {
+        console.log("[DEBUG INTERIOR_EXTERIOR] ✅ 最終的なRadarPoint:", {
+          code: mappedFrontendCode,
+          label: AXIS_LABELS[frontendCode],
+          value: Number(targetAxis.score.toFixed(1)),
+        });
+      }
+      
+      return {
+        code: mappedFrontendCode,
+        label: AXIS_LABELS[frontendCode] ?? frontendCode,
+        value: Number(targetAxis.score.toFixed(1)),
+        okLine: data.ok_line,
+      };
+    });
+  }, [data, FRONTEND_TO_BACKEND_CODE_MAP]);
 
   const handleAxisClick = (axisCode: string) => {
-    router.push(`/axes/${axisCode}`);
+    // axisCodeは既にフロントエンドのcode（radarDataで変換済み）なので、そのまま使用
+    router.push(`/deep_questions?axis=${axisCode}`);
   };
 
 const renderAngleTick = (props: {
@@ -210,6 +394,8 @@ const renderAngleTick = (props: {
   radius?: number;
 }): ReactElement<SVGElement> => {
   const { payload, x, y } = props;
+  // labelで検索（payload.valueはlabel）
+  // AXIS_ORDERの順序で最初に一致するものを使用（重複を防ぐ）
   const point = radarData.find((entry) => entry.label === payload.value);
   if (!point) return <g /> as ReactElement<SVGElement>;
     const Icon = AXIS_ICONS[point.code];
@@ -313,12 +499,36 @@ const renderAngleTick = (props: {
               <h1 className="text-2xl font-semibold leading-8">開業準備の現在地</h1>
               <p className="text-sm text-slate-600">コンセプトと準備度レーダーの概要を確認できます。</p>
             </div>
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <div className="flex flex-col items-end gap-2 text-sm font-semibold text-slate-700">
               {data.user_email ? (
                 <span className="rounded-full bg-slate-100 px-3 py-2">{data.user_email}</span>
               ) : (
                 <span className="rounded-full bg-slate-100 px-3 py-2">未ログイン</span>
               )}
+
+              {/* ▼追加：プランUI */}
+              {plans.length >= 2 ? (
+                <select
+                  value={selectedPlanId || ""}
+                  onChange={(e) => handlePlanSelectChange(e.target.value)}
+                  className="h-10 rounded-full border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 hover:border-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+                >
+                  {!selectedPlanId ? <option value="">プランを選択</option> : null}
+
+                  {plans.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.label}
+                    </option>
+                  ))}
+
+                  <option value="__new__">＋ 新規プランを検討する</option>
+                </select>
+              ) : (
+                <Button variant="secondary" onClick={startNewPlanFlow} className="px-4 py-2">
+                  新規プランを検討する
+                </Button>
+              )}
+              {/* ▲追加：プランUI */}
             </div>
           </div>
           <div className="grid gap-4 lg:grid-cols-[1fr_2fr]">

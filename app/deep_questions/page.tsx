@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Loader2, Send, Sparkles } from "lucide-react";
 
@@ -10,6 +10,14 @@ import { Card } from "@/components/ui/card";
 import { Container } from "@/components/ui/container";
 import { apiFetch } from "@/lib/api-client";
 import { clearAccessToken } from "@/lib/auth-token";
+import { ConceptPage } from "@/app/concept/page";
+import { RevenueForecastPage } from "@/app/revenue_forecast/page";
+import { FundingPlanPage } from "@/app/funding_plan/page";
+import { OperationPage } from "@/app/operation/page";
+import { LocationPage } from "@/app/location/page";
+import { InteriorExteriorPage } from "@/app/interior_exterior/page";
+import { MarketingPage } from "@/app/marketing/page";
+import { MenuPage } from "@/app/menu/page";
 
 type AxisOption = {
   code: string;
@@ -54,6 +62,7 @@ export default function DeepQuestionsPage() {
 function DeepQuestionsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const selectedAxisParam = searchParams.get("axis");
   const [axes, setAxes] = useState<AxisOption[]>([]);
   const [selectedAxis, setSelectedAxis] = useState<string | null>(null);
   const [thread, setThread] = useState<DeepThread | null>(null);
@@ -61,6 +70,42 @@ function DeepQuestionsContent() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // バックエンドのcodeをフロントエンドのcodeにマッピング
+  const BACKEND_TO_FRONTEND_CODE_MAP: Record<string, string> = {
+    concept: "concept",
+    revenue_forecast: "revenue_forecast",
+    funds: "funding_plan", // バックエンドのfundsはフロントエンドのfunding_planに対応
+    location: "location",
+    interior_exterior: "interior_exterior",
+    menu: "menu",
+    operation: "operation",
+    marketing: "marketing",
+    // 旧コード名との互換性
+    compliance: "funding_plan",
+    equipment: "interior_exterior",
+  };
+
+  // バックエンドのnameからフロントエンドのcodeにマッピング（nameが確実な場合）
+  const NAME_TO_FRONTEND_CODE_MAP: Record<string, string> = {
+    "コンセプト": "concept",
+    "収支予測": "revenue_forecast",
+    "資金計画": "funding_plan",
+    "立地": "location",
+    "内装外装": "interior_exterior",
+    "メニュー": "menu",
+    "オペレーション": "operation",
+    "販促": "marketing",
+    // 旧名称との互換性
+    "集客": "marketing",
+    "設備": "interior_exterior",
+  };
+
+  // URLパラメータのaxisをフロントエンドのcodeに変換
+  const normalizeAxisCode = useCallback((code: string | null): string | null => {
+    if (!code) return null;
+    return BACKEND_TO_FRONTEND_CODE_MAP[code] || code;
+  }, []);
 
   useEffect(() => {
     const loadAxes = async () => {
@@ -71,10 +116,40 @@ function DeepQuestionsContent() {
         return;
       }
       if (data?.axes?.length) {
-        const options = data.axes.map((a) => ({ code: a.code, name: a.name }));
+        // nameから正しいフロントエンドのcodeを決定（nameが確実な場合）
+        const options = data.axes.map((a) => {
+          // まずnameからマッピングを試みる（nameが確実なため優先）
+          const nameBasedCode = NAME_TO_FRONTEND_CODE_MAP[a.name];
+          if (nameBasedCode) {
+            // nameベースのマッピングが見つかった場合はそれを使用
+            return { 
+              code: nameBasedCode, 
+              name: a.name 
+            };
+          }
+          // nameベースのマッピングがない場合は、codeを変換
+          const codeBasedCode = normalizeAxisCode(a.code);
+          // 優先順位: nameベース > codeベース > 元のcode
+          const finalCode = codeBasedCode || a.code;
+          return { 
+            code: finalCode, 
+            name: a.name 
+          };
+        });
         setAxes(options);
-        const initial = searchParams.get("axis") || options[0].code;
-        setSelectedAxis(initial);
+        const axisParam = searchParams.get("axis");
+        const normalizedParam = normalizeAxisCode(axisParam);
+        // nameベースのマッピングも試みる
+        const nameBasedParam = axisParam ? NAME_TO_FRONTEND_CODE_MAP[axisParam] : null;
+        const finalParam = nameBasedParam || normalizedParam;
+        const initial = finalParam || (options[0] ? options[0].code : null);
+        if (initial) {
+          setSelectedAxis(initial);
+          // URLパラメータがバックエンドのcodeやnameの場合は、フロントエンドのcodeに更新
+          if (axisParam && axisParam !== initial && finalParam) {
+            router.replace(`/deep_questions?axis=${finalParam}`, { scroll: false });
+          }
+        }
       } else {
         setError("軸の取得に失敗しました。時間をおいて再試行してください。");
       }
@@ -84,7 +159,35 @@ function DeepQuestionsContent() {
       setError("軸の取得に失敗しました。時間をおいて再試行してください。");
       setLoading(false);
     });
-  }, [router, searchParams]);
+  }, [router, searchParams, normalizeAxisCode]);
+
+  // URLパラメータのaxisが変更されたときにselectedAxisを更新
+  const axisParam = useMemo(() => {
+    const param = searchParams.get("axis");
+    // バックエンドのcodeをフロントエンドのcodeに変換
+    return normalizeAxisCode(param);
+  }, [searchParams, normalizeAxisCode]);
+  
+  useEffect(() => {
+    if (axisParam) {
+      // URLパラメータが存在する場合は、それに合わせてselectedAxisを更新
+      if (axisParam !== selectedAxis) {
+        setSelectedAxis(axisParam);
+        // URLも正しいcodeに更新（バックエンドのcodeが来た場合）
+        const originalParam = searchParams.get("axis");
+        if (originalParam && originalParam !== axisParam) {
+          router.replace(`/deep_questions?axis=${axisParam}`, { scroll: false });
+        }
+      }
+    } else if (axes.length > 0) {
+      // axisパラメータがない場合は最初の軸を選択してURLを更新
+      const firstAxis = normalizeAxisCode(axes[0].code) || axes[0].code;
+      if (firstAxis !== selectedAxis) {
+        setSelectedAxis(firstAxis);
+        router.replace(`/deep_questions?axis=${firstAxis}`, { scroll: false });
+      }
+    }
+  }, [axisParam, axes, selectedAxis, router, searchParams]);
 
   useEffect(() => {
     if (!selectedAxis) return;
@@ -161,7 +264,11 @@ function DeepQuestionsContent() {
                 <select
                   className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
                   value={selectedAxis ?? ""}
-                  onChange={(e) => setSelectedAxis(e.target.value)}
+                  onChange={(e) => {
+                    const newAxis = e.target.value;
+                    setSelectedAxis(newAxis);
+                    router.push(`/deep_questions?axis=${newAxis}`);
+                  }}
                 >
                   {axes.map((axis) => (
                     <option key={axis.code} value={axis.code}>
@@ -179,7 +286,32 @@ function DeepQuestionsContent() {
               </div>
             </Card>
 
-            <Card className="flex flex-col gap-4 p-4">
+            {/* axis=concept の場合は ConceptPage のコンテンツを表示 */}
+            {/* axis=revenue_forecast の場合は RevenueForecastPage のコンテンツを表示 */}
+            {/* axis=funding_plan の場合は FundingPlanPage のコンテンツを表示 */}
+            {/* axis=operation の場合は OperationPage のコンテンツを表示 */}
+            {/* axis=location の場合は LocationPage のコンテンツを表示 */}
+            {/* axis=interior_exterior の場合は InteriorExteriorPage のコンテンツを表示 */}
+            {/* axis=marketing の場合は MarketingPage のコンテンツを表示 */}
+            {/* axis=menu の場合は MenuPage のコンテンツを表示 */}
+            {selectedAxis === "concept" ? (
+              <ConceptPage hideHeader={true} />
+            ) : selectedAxis === "revenue_forecast" ? (
+              <RevenueForecastPage hideHeader={true} />
+            ) : selectedAxis === "funding_plan" ? (
+              <FundingPlanPage hideHeader={true} />
+            ) : selectedAxis === "operation" ? (
+              <OperationPage hideHeader={true} />
+            ) : selectedAxis === "location" ? (
+              <LocationPage hideHeader={true} />
+            ) : selectedAxis === "interior_exterior" ? (
+              <InteriorExteriorPage hideHeader={true} />
+            ) : selectedAxis === "marketing" ? (
+              <MarketingPage hideHeader={true} />
+            ) : selectedAxis === "menu" ? (
+              <MenuPage hideHeader={true} />
+            ) : (
+              <Card className="flex flex-col gap-4 p-4">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-sky-600" />
                 <div>
@@ -244,6 +376,7 @@ function DeepQuestionsContent() {
                 </div>
               </div>
             </Card>
+            )}
           </div>
         )}
       </Container>
