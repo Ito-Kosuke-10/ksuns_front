@@ -53,7 +53,7 @@ export default function Home() {
               <div className="relative h-20 w-52 sm:h-24 sm:w-60 md:h-28 md:w-72 lg:h-32 lg:w-80">
                 <Image
                   alt="おみせ開業AIロゴ"
-                  src="/images/logo.png"
+                  src="/images/logo-v2.png"
                   fill
                   className="object-contain object-left"
                   priority
@@ -547,7 +547,7 @@ export default function Home() {
               <div className="relative h-16 w-40 md:h-20 md:w-52">
                 <Image
                   alt="おみせ開業AIロゴ"
-                  src="/images/logo.png"
+                  src="/images/logo-v2.png"
                   fill
                   className="object-contain"
                 />
