@@ -453,14 +453,6 @@ const renderAngleTick = (props: {
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Radar</p>
                   <h3 className="text-lg font-semibold text-slate-900">準備度レーダー</h3>
                 </div>
-                <div className="hidden items-center gap-2 text-xs text-slate-600 lg:flex">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700">
-                    現在値
-                  </span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700">
-                    OKライン {data.ok_line}
-                  </span>
-                </div>
               </div>
               <div className="mt-2 h-[430px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
@@ -510,7 +502,7 @@ const renderAngleTick = (props: {
                 </p>
                 {data.next_focus && (
                   <p className="mt-1 text-xs text-slate-700">
-                    次に強化: {data.next_focus.axis_name}（{data.next_focus.reason}）
+                    次に強化: {AXIS_LABELS[data.next_focus.axis_code] || data.next_focus.axis_name}（{data.next_focus.reason}）
                   </p>
                 )}
               </div>
@@ -551,7 +543,7 @@ const renderAngleTick = (props: {
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Report</p>
                 <h3 className="text-lg font-semibold text-slate-900">開業プラン出力</h3>
                 <p className="text-xs text-slate-600">
-                  開業プランをグラフィカルに表示するページに遷移します（現在はハリボテ画面）。
+                  開業プランをグラフィカルに表示するページに遷移します。
                 </p>
               </div>
             </div>
