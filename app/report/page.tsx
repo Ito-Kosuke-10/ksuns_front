@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
-import { FileText, Loader2, Printer } from "lucide-react";
+import { ArrowLeft, FileText, Loader2, Printer } from "lucide-react";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -74,6 +74,17 @@ export default function ReportPage() {
 
           {/* アクションボタン */}
           <div className="flex flex-wrap gap-3">
+            <Button
+              variant="ghost"
+              onClick={() => router.push("/dashboard")}
+              className="px-4 py-2"
+            >
+              <span className="flex items-center gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                ダッシュボードに戻る
+              </span>
+            </Button>
+            
             <Button
               onClick={handleGenerate}
               disabled={loading}
