@@ -35,16 +35,23 @@ const INTERIOR_EXTERIOR_CARDS = {
   "12": { title: "デザイン要望書の完成", step: 3 },
 };
 
-export function InteriorExteriorPage({ hideHeader = false }: { hideHeader?: boolean }) {
+export function InteriorExteriorPage({ hideHeader = false, initialCardId }: { hideHeader?: boolean; initialCardId?: string | null }) {
   const router = useRouter();
   const [statuses, setStatuses] = useState<InteriorExteriorStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(initialCardId || null);
 
   useEffect(() => {
     loadStatuses();
   }, []);
+
+  // initialCardIdが変更されたらモーダルを開く
+  useEffect(() => {
+    if (initialCardId && INTERIOR_EXTERIOR_CARDS[initialCardId as keyof typeof INTERIOR_EXTERIOR_CARDS]) {
+      setSelectedCardId(initialCardId);
+    }
+  }, [initialCardId]);
 
   const loadStatuses = async () => {
     try {
@@ -417,16 +424,21 @@ function InteriorExteriorChatModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="relative w-full max-w-2xl bg-white rounded-lg shadow-xl max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="relative w-full max-w-2xl mx-4 bg-white rounded-2xl shadow-2xl max-h-[90vh] flex flex-col ring-1 ring-black/5">
         {/* ヘッダー */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold text-slate-900">
+        <div className="flex items-center justify-between p-5 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white rounded-t-2xl">
+          <h2 className="text-lg font-bold text-slate-900">
             {INTERIOR_EXTERIOR_CARDS[cardId as keyof typeof INTERIOR_EXTERIOR_CARDS]?.title}
           </h2>
-          <Button variant="ghost" onClick={onClose}>
-            ✕
-          </Button>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-full hover:bg-slate-100 transition-colors"
+          >
+            <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
         {/* エラー表示 */}
@@ -437,63 +449,63 @@ function InteriorExteriorChatModal({
         )}
 
         {/* チャットエリア */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-gradient-to-b from-white to-slate-50">
           {messages.map((msg, idx) => (
             <div
               key={idx}
               className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-[80%] rounded-lg p-3 ${
+                className={`max-w-[80%] rounded-2xl px-4 py-3 shadow-sm ${
                   msg.role === "user"
-                    ? "bg-blue-500 text-white"
-                    : "bg-slate-100 text-slate-900"
+                    ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white"
+                    : "bg-white text-slate-900 border border-slate-200"
                 }`}
               >
-                {msg.content}
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
               </div>
             </div>
           ))}
           {loading && (
             <div className="flex justify-start">
-              <div className="bg-slate-100 rounded-lg p-3">考え中...</div>
+              <div className="bg-white border border-slate-200 rounded-2xl px-4 py-3 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+              </div>
             </div>
           )}
         </div>
 
         {/* サマリー表示エリア */}
         {summary && (
-          <div className="p-4 bg-green-50 border-t">
-            <h3 className="mb-2 font-semibold text-slate-900">サマリー</h3>
-            <p className="text-sm text-slate-700">{summary}</p>
+          <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-t border-green-200">
+            <h3 className="mb-2 font-semibold text-green-800 text-sm">サマリー</h3>
+            <p className="text-sm text-green-700 leading-relaxed">{summary}</p>
           </div>
         )}
 
         {/* フッター */}
-        <div className="p-4 border-t space-y-2">
-          <div className="flex gap-2">
-            <Button
+        <div className="p-4 border-t border-slate-200 space-y-3 bg-white rounded-b-2xl">
+          {!summary && (
+            <button
               onClick={handleGenerateSummary}
               disabled={isSummaryGenerating || messages.length === 0}
-              variant={summary ? "secondary" : "primary"}
-              className="flex-1"
+              className="w-full py-3 px-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md"
             >
-              {isSummaryGenerating 
-                ? "生成中..." 
-                : summary 
-                  ? "AIにサマリー再生成" 
-                  : "AIにサマリー依頼"}
-            </Button>
-            {summary && (
-              <Button 
-                variant="secondary" 
-                onClick={handleComplete} 
-                className="flex-1 bg-green-600 hover:bg-green-700"
-              >
-                完了
-              </Button>
-            )}
-          </div>
+              {isSummaryGenerating ? "生成中..." : "AIにサマリー依頼"}
+            </button>
+          )}
+          {summary && (
+            <button
+              onClick={handleComplete}
+              className="w-full py-3 px-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all shadow-md"
+            >
+              完了
+            </button>
+          )}
           <div className="flex gap-2">
             <input
               type="text"
@@ -501,12 +513,16 @@ function InteriorExteriorChatModal({
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
               placeholder="メッセージを入力..."
-              className="flex-1 px-3 py-2 border rounded-md"
+              className="flex-1 px-4 py-3 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               disabled={loading}
             />
-            <Button variant="secondary" onClick={handleSendMessage} disabled={loading || !inputMessage.trim()}>
+            <button
+              onClick={handleSendMessage}
+              disabled={loading || !inputMessage.trim()}
+              className="px-5 py-3 bg-slate-900 text-white font-semibold rounded-xl hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
               送信
-            </Button>
+            </button>
           </div>
         </div>
       </div>
