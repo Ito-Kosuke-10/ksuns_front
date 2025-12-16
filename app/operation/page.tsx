@@ -471,20 +471,29 @@ function OperationChatModal({
 
         {/* フッター */}
         <div className="p-4 border-t space-y-2">
-          {!summary && (
+          <div className="flex gap-2">
             <Button
               onClick={handleGenerateSummary}
               disabled={isSummaryGenerating || messages.length === 0}
-              className="w-full"
+              variant={summary ? "secondary" : "primary"}
+              className="flex-1"
             >
-              {isSummaryGenerating ? "生成中..." : "AIにサマリー依頼"}
+              {isSummaryGenerating 
+                ? "生成中..." 
+                : summary 
+                  ? "AIにサマリー再生成" 
+                  : "AIにサマリー依頼"}
             </Button>
-          )}
-          {summary && (
-            <Button variant="secondary" onClick={handleComplete} className="w-full bg-green-600 hover:bg-green-700">
-              完了
-            </Button>
-          )}
+            {summary && (
+              <Button 
+                variant="secondary" 
+                onClick={handleComplete} 
+                className="flex-1 bg-green-600 hover:bg-green-700"
+              >
+                完了
+              </Button>
+            )}
+          </div>
           <div className="flex gap-2">
             <input
               type="text"
