@@ -145,6 +145,15 @@ function DashboardContent() {
       }
     }
   }, [activeView]);
+
+  // マインドマップ操作中はカルーセルのスナップを無効化
+  const [isMindmapInteracting, setIsMindmapInteracting] = useState(false);
+  const handleMindmapInteractionStart = useCallback(() => {
+    setIsMindmapInteracting(true);
+  }, []);
+  const handleMindmapInteractionEnd = useCallback(() => {
+    setIsMindmapInteracting(false);
+  }, []);
   // ▲追加ここまで
   // ▼追加：プランUI用のlocalStorage管理
   type LocalPlan = { id: string; label: string; created_at: string };
@@ -448,16 +457,16 @@ const renderAngleTick = (props: {
   // AXIS_ORDERの順序で最初に一致するものを使用（重複を防ぐ）
   const point = radarData.find((entry) => entry.label === payload.value);
   if (!point) return <g /> as ReactElement<SVGElement>;
-    const Icon = AXIS_ICONS[point.code];
     const isHover = point.code === hoverAxis;
     const color = isHover ? HIGHLIGHT_COLOR : "#475569";
     const bgColor = isHover ? "#e0f2fe" : "#f8fafc";
     const borderColor = isHover ? "#38bdf8" : "#e2e8f0";
-    const width = 124;
-    const height = 34;
-    const radiusOffset = 24;
-    const iconYOffset = -11;
-    const textYOffset = 4;
+    // モバイル対応: ラベルサイズを小さく
+    const width = 80;
+    const height = 26;
+    const radiusOffset = 16;
+    const textYOffset = 1;
+    const fontSize = 10;
 
     const cxVal = Number.isFinite(props.cx) ? (props.cx as number) : 0;
     const cyVal = Number.isFinite(props.cy) ? (props.cy as number) : 0;
@@ -495,15 +504,7 @@ const renderAngleTick = (props: {
           stroke={borderColor}
           strokeWidth={1}
         />
-        {Icon ? (
-          <Icon
-            className="h-4 w-4"
-            style={{ color }}
-            aria-hidden="true"
-            transform={`translate(${-width / 2}, ${iconYOffset})`}
-          />
-        ) : null}
-        <text x={Icon ? -width / 2 + 30 : -width / 2 + 10} y={textYOffset} textAnchor="start" fill={color} fontSize={12}>
+        <text x={0} y={textYOffset} textAnchor="middle" dominantBaseline="middle" fill={color} fontSize={fontSize} fontWeight="500">
           {payload.value}
         </text>
       </g>
@@ -642,14 +643,16 @@ const renderAngleTick = (props: {
               <div
                 ref={carouselRef}
                 onScroll={handleCarouselScroll}
-                className="flex snap-x snap-mandatory overflow-x-auto scrollbar-hide"
-                style={{ scrollBehavior: "smooth" }}
+                className={`flex overflow-x-auto scrollbar-hide ${
+                  isMindmapInteracting ? "snap-none" : "snap-x snap-mandatory"
+                }`}
+                style={{ scrollBehavior: isMindmapInteracting ? "auto" : "smooth" }}
               >
                 {/* Slide 1: レーダーチャート */}
                 <div className="flex-shrink-0 w-full snap-center">
-                  <div className="h-[430px] w-full">
+                  <div className="h-[320px] sm:h-[380px] md:h-[430px] w-full min-h-[280px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <RadarChart data={radarData}>
+                      <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="65%">
                         <PolarGrid />
                         <PolarAngleAxis dataKey="label" tick={renderAngleTick} />
                         <PolarRadiusAxis
@@ -683,9 +686,21 @@ const renderAngleTick = (props: {
                 </div>
 
                 {/* Slide 2: マインドマップ */}
-                <div className="flex-shrink-0 w-full snap-center touch-pan-y">
-                  <div className="h-[430px] w-full overflow-y-auto">
-                    <MindmapSVG selectedAxis={hoverAxis} />
+                <div
+                  className="flex-shrink-0 w-full snap-center"
+                  onPointerDownCapture={(e) => {
+                    // マインドマップ内でのジェスチャはカルーセルに伝播させない
+                    if (activeView === "mindmap") {
+                      e.stopPropagation();
+                    }
+                  }}
+                >
+                  <div className="h-[320px] sm:h-[380px] md:h-[430px] w-full">
+                    <MindmapSVG
+                      selectedAxis={hoverAxis}
+                      onInteractionStart={handleMindmapInteractionStart}
+                      onInteractionEnd={handleMindmapInteractionEnd}
+                    />
                   </div>
                 </div>
               </div>

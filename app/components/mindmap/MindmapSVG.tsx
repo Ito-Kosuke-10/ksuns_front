@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
+import { Loader2, ZoomIn, ZoomOut, RotateCcw, Maximize2 } from "lucide-react";
 import { apiFetch } from "@/lib/api-client";
 import { clearAccessToken } from "@/lib/auth-token";
 import {
@@ -14,6 +14,8 @@ import {
 type MindmapSVGProps = {
   selectedAxis?: string | null;
   onNodeClick?: (nodeId: string, axisCode: string) => void;
+  onInteractionStart?: () => void;
+  onInteractionEnd?: () => void;
 };
 
 // ステータスで色を決定
@@ -210,7 +212,14 @@ const AXIS_STEPS: Record<string, { steps: { id: string; name: string; items: { i
   },
 };
 
-export function MindmapSVG({ selectedAxis, onNodeClick }: MindmapSVGProps) {
+// Pointer情報を保持する型
+type PointerInfo = {
+  id: number;
+  x: number;
+  y: number;
+};
+
+export function MindmapSVG({ selectedAxis, onNodeClick, onInteractionStart, onInteractionEnd }: MindmapSVGProps) {
   const router = useRouter();
   const [mindmapState, setMindmapState] = useState<MindmapState | null>(null);
   const [loading, setLoading] = useState(true);
@@ -218,11 +227,76 @@ export function MindmapSVG({ selectedAxis, onNodeClick }: MindmapSVGProps) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [expandedAxes, setExpandedAxes] = useState<Set<string>>(new Set());
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
-  const [zoom, setZoom] = useState(0.8);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  // ズーム・パン状態
+  const [scale, setScale] = useState(1);
+  const [translate, setTranslate] = useState({ x: 0, y: 0 });
+  const [isInteracting, setIsInteracting] = useState(false);
+  const [initialFitDone, setInitialFitDone] = useState(false);
+
+  // ポインター管理
+  const pointersRef = useRef<Map<number, PointerInfo>>(new Map());
+  const lastPinchDistanceRef = useRef<number | null>(null);
+  const lastPanPosRef = useRef<{ x: number; y: number } | null>(null);
+
+  const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+
+  // SVG設定
+  const svgConfig = useMemo(() => ({
+    width: 3000,
+    height: 2600,
+    centerX: 1500,
+    centerY: 1300,
+    centerRadius: 80,
+    axisRadius: 65,
+    stepRadius: 50,
+    itemRadius: 45,
+    axisDistance: 380,
+    stepDistance: 180,
+    itemDistance: 140,
+    stepSpreadAngle: Math.PI * 0.5,
+    itemSpreadBase: Math.PI * 0.4,
+  }), []);
+
+  // 初期フィット計算
+  const calculateFitScale = useCallback(() => {
+    if (!containerRef.current) return 1;
+    const containerWidth = containerRef.current.clientWidth;
+    const containerHeight = containerRef.current.clientHeight;
+
+    // コンテンツの実際のサイズ（軸ノードの外側まで含む）
+    const contentWidth = svgConfig.axisDistance * 2 + svgConfig.axisRadius * 2 + 100;
+    const contentHeight = svgConfig.axisDistance * 2 + svgConfig.axisRadius * 2 + 100;
+
+    const scaleX = containerWidth / contentWidth;
+    const scaleY = containerHeight / contentHeight;
+
+    // 両方向に収まるスケール（少し余裕を持たせる）
+    const fitScale = Math.min(scaleX, scaleY) * 0.85;
+
+    // スケール範囲内にクランプ
+    return Math.max(0.3, Math.min(5, fitScale));
+  }, [svgConfig]);
+
+  // フィットボタン押下時
+  const handleFit = useCallback(() => {
+    const fitScale = calculateFitScale();
+    setScale(fitScale);
+    setTranslate({ x: 0, y: 0 });
+  }, [calculateFitScale]);
+
+  // 初期表示時にフィット
+  useEffect(() => {
+    if (!loading && !initialFitDone && containerRef.current) {
+      // 少し遅延させてコンテナサイズが確定してから計算
+      const timer = setTimeout(() => {
+        handleFit();
+        setInitialFitDone(true);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, initialFitDone, handleFit]);
 
   // マインドマップ状態を取得
   const loadMindmapState = useCallback(async () => {
@@ -249,36 +323,129 @@ export function MindmapSVG({ selectedAxis, onNodeClick }: MindmapSVGProps) {
     loadMindmapState();
   }, [loadMindmapState]);
 
-  // ズーム操作（最大500%まで）
-  const handleZoomIn = () => setZoom((z) => Math.min(z + 0.2, 5));
-  const handleZoomOut = () => setZoom((z) => Math.max(z - 0.2, 0.3));
+  // ズーム操作
+  const handleZoomIn = () => setScale((s) => Math.min(s * 1.25, 5));
+  const handleZoomOut = () => setScale((s) => Math.max(s / 1.25, 0.3));
   const handleReset = () => {
-    setZoom(1);
-    setPan({ x: 0, y: 0 });
+    setScale(1);
+    setTranslate({ x: 0, y: 0 });
   };
 
-  // マウスホイールでズーム（最大500%まで）
+  // マウスホイールでズーム
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
-    const delta = e.deltaY > 0 ? -0.1 : 0.1;
-    setZoom((z) => Math.max(0.3, Math.min(5, z + delta)));
+    e.stopPropagation();
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    setScale((s) => Math.max(0.3, Math.min(5, s * delta)));
   }, []);
 
-  // ドラッグでパン
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button === 0) {
-      setIsDragging(true);
-      setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
-    }
+  // 2点間の距離を計算
+  const getDistance = (p1: PointerInfo, p2: PointerInfo): number => {
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    return Math.sqrt(dx * dx + dy * dy);
   };
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (isDragging) {
-      setPan({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
-    }
-  }, [isDragging, dragStart]);
+  // 2点の中心を計算
+  const getCenter = (p1: PointerInfo, p2: PointerInfo): { x: number; y: number } => {
+    return {
+      x: (p1.x + p2.x) / 2,
+      y: (p1.y + p2.y) / 2,
+    };
+  };
 
-  const handleMouseUp = () => setIsDragging(false);
+  // ポインターダウン
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+
+    const pointer: PointerInfo = {
+      id: e.pointerId,
+      x: e.clientX,
+      y: e.clientY,
+    };
+
+    pointersRef.current.set(e.pointerId, pointer);
+
+    if (pointersRef.current.size === 1) {
+      // 1本指: パン開始
+      lastPanPosRef.current = { x: e.clientX, y: e.clientY };
+    } else if (pointersRef.current.size === 2) {
+      // 2本指: ピンチズーム開始
+      const pointers = Array.from(pointersRef.current.values());
+      lastPinchDistanceRef.current = getDistance(pointers[0], pointers[1]);
+    }
+
+    if (!isInteracting) {
+      setIsInteracting(true);
+      onInteractionStart?.();
+    }
+
+    // ポインターキャプチャ
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, [isInteracting, onInteractionStart]);
+
+  // ポインター移動
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!pointersRef.current.has(e.pointerId)) return;
+
+    // ポインター位置を更新
+    pointersRef.current.set(e.pointerId, {
+      id: e.pointerId,
+      x: e.clientX,
+      y: e.clientY,
+    });
+
+    const pointerCount = pointersRef.current.size;
+
+    if (pointerCount === 1 && lastPanPosRef.current) {
+      // 1本指: パン
+      const dx = e.clientX - lastPanPosRef.current.x;
+      const dy = e.clientY - lastPanPosRef.current.y;
+
+      setTranslate((prev) => ({
+        x: prev.x + dx,
+        y: prev.y + dy,
+      }));
+
+      lastPanPosRef.current = { x: e.clientX, y: e.clientY };
+    } else if (pointerCount === 2 && lastPinchDistanceRef.current !== null) {
+      // 2本指: ピンチズーム
+      const pointers = Array.from(pointersRef.current.values());
+      const currentDistance = getDistance(pointers[0], pointers[1]);
+      const scaleFactor = currentDistance / lastPinchDistanceRef.current;
+
+      setScale((prev) => {
+        const newScale = prev * scaleFactor;
+        return Math.max(0.3, Math.min(5, newScale));
+      });
+
+      lastPinchDistanceRef.current = currentDistance;
+    }
+  }, []);
+
+  // ポインターアップ/キャンセル
+  const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    pointersRef.current.delete(e.pointerId);
+
+    // ポインターキャプチャ解除
+    try {
+      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
+
+    if (pointersRef.current.size === 0) {
+      lastPanPosRef.current = null;
+      lastPinchDistanceRef.current = null;
+      setIsInteracting(false);
+      onInteractionEnd?.();
+    } else if (pointersRef.current.size === 1) {
+      // 2本→1本に減った: パンモードに切り替え
+      const remaining = Array.from(pointersRef.current.values())[0];
+      lastPanPosRef.current = { x: remaining.x, y: remaining.y };
+      lastPinchDistanceRef.current = null;
+    }
+  }, [onInteractionEnd]);
 
   // 軸の展開/折りたたみ
   const toggleAxisExpand = (axisCode: string) => {
@@ -286,7 +453,6 @@ export function MindmapSVG({ selectedAxis, onNodeClick }: MindmapSVGProps) {
       const newSet = new Set(prev);
       if (newSet.has(axisCode)) {
         newSet.delete(axisCode);
-        // 軸を閉じたらその下のSTEPも閉じる
         setExpandedSteps((steps) => {
           const newSteps = new Set(steps);
           Array.from(newSteps).forEach((key) => {
@@ -301,16 +467,14 @@ export function MindmapSVG({ selectedAxis, onNodeClick }: MindmapSVGProps) {
     });
   };
 
-  // STEPの展開/折りたたみ（同じ軸内ではアコーディオン式：1つだけ開く）
+  // STEPの展開/折りたたみ
   const toggleStepExpand = (axisCode: string, stepId: string) => {
     const key = `${axisCode}_${stepId}`;
     setExpandedSteps((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(key)) {
-        // 既に開いている場合は閉じる
         newSet.delete(key);
       } else {
-        // 同じ軸内の他のSTEPを閉じてから開く
         Array.from(newSet).forEach((existingKey) => {
           if (existingKey.startsWith(`${axisCode}_`)) {
             newSet.delete(existingKey);
@@ -322,34 +486,15 @@ export function MindmapSVG({ selectedAxis, onNodeClick }: MindmapSVGProps) {
     });
   };
 
-  // 項目クリック → 深掘りページのチャットモーダルへ直接遷移
+  // 項目クリック
   const handleItemClick = (axisCode: string, stepId: string, itemId: string) => {
     if (onNodeClick) {
       const nodeId = `${axisCode}_${stepId}_${itemId}`;
       onNodeClick(nodeId, axisCode);
     } else {
-      // cardIdパラメータを追加してチャットモーダルが自動で開くようにする
       router.push(`/deep_questions?axis=${axisCode}&cardId=${encodeURIComponent(itemId)}`);
     }
   };
-
-  // SVG設定（より広いスペースを確保）
-  const svgConfig = useMemo(() => ({
-    width: 3000,
-    height: 2600,
-    centerX: 1500,
-    centerY: 1300,
-    centerRadius: 80,
-    axisRadius: 65,
-    stepRadius: 50,
-    itemRadius: 45,
-    axisDistance: 380,
-    stepDistance: 180,
-    itemDistance: 140,
-    // スプレッド角度の設定（統一）
-    stepSpreadAngle: Math.PI * 0.5, // STEPの広がり角度
-    itemSpreadBase: Math.PI * 0.4,  // 項目の基本広がり角度
-  }), []);
 
   // 軸の位置計算
   const axisPositions = useMemo(() => {
@@ -393,9 +538,9 @@ export function MindmapSVG({ selectedAxis, onNodeClick }: MindmapSVGProps) {
   }
 
   return (
-    <div className="h-full flex flex-col">
-      {/* ヘッダー＆ズームコントロール */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-slate-200">
+    <div className="h-full flex flex-col relative">
+      {/* ヘッダー（デスクトップ用） */}
+      <div className="hidden sm:flex items-center justify-between px-4 py-2 border-b border-slate-200">
         <div>
           <h3 className="text-base font-semibold text-slate-900">進捗マップ</h3>
           <p className="text-xs text-slate-500">軸をクリックで展開 → STEPをクリック → 項目で深掘り</p>
@@ -408,7 +553,7 @@ export function MindmapSVG({ selectedAxis, onNodeClick }: MindmapSVGProps) {
           >
             <ZoomOut className="w-4 h-4 text-slate-600" />
           </button>
-          <span className="text-xs text-slate-600 w-12 text-center">{Math.round(zoom * 100)}%</span>
+          <span className="text-xs text-slate-600 w-12 text-center">{Math.round(scale * 100)}%</span>
           <button
             onClick={handleZoomIn}
             className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors"
@@ -417,32 +562,50 @@ export function MindmapSVG({ selectedAxis, onNodeClick }: MindmapSVGProps) {
             <ZoomIn className="w-4 h-4 text-slate-600" />
           </button>
           <button
+            onClick={handleFit}
+            className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors"
+            title="フィット"
+          >
+            <Maximize2 className="w-4 h-4 text-slate-600" />
+          </button>
+          <button
             onClick={handleReset}
             className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors"
-            title="リセット"
+            title="100%"
           >
             <RotateCcw className="w-4 h-4 text-slate-600" />
           </button>
         </div>
       </div>
 
-      {/* SVG Mindmap */}
+      {/* モバイル用ヘッダー */}
+      <div className="flex sm:hidden items-center justify-between px-3 py-2 border-b border-slate-200">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900">進捗マップ</h3>
+          <p className="text-[10px] text-slate-500">ピンチでズーム・ドラッグで移動</p>
+        </div>
+      </div>
+
+      {/* SVG Mindmap Container */}
       <div
-        className="flex-1 overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100"
+        ref={containerRef}
+        className="flex-1 overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 relative"
+        style={{ touchAction: "none" }}
         onWheel={handleWheel}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        style={{ cursor: isDragging ? "grabbing" : "grab" }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onPointerLeave={handlePointerUp}
       >
         <svg
           ref={svgRef}
           viewBox={`0 0 ${svgConfig.width} ${svgConfig.height}`}
           className="w-full h-full"
           style={{
-            transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
+            transform: `translate(${translate.x}px, ${translate.y}px) scale(${scale})`,
             transformOrigin: "center center",
+            cursor: isInteracting ? "grabbing" : "grab",
           }}
         >
           <defs>
@@ -510,11 +673,9 @@ export function MindmapSVG({ selectedAxis, onNodeClick }: MindmapSVGProps) {
               const stepY = axis.y + Math.sin(stepAngle) * svgConfig.stepDistance;
 
               const itemCount = step.items.length;
-              // 項目数に応じてスプレッド角度を調整（適度な広がり）
               const itemSpread = svgConfig.itemSpreadBase * Math.min(itemCount / 3, 1.5);
 
               return step.items.map((item, itemIndex) => {
-                // 項目はSTEPの外側に放射状に配置
                 const itemAngle = stepAngle - itemSpread / 2 + (itemSpread * itemIndex) / Math.max(itemCount - 1, 1);
                 const itemX = stepX + Math.cos(itemAngle) * svgConfig.itemDistance;
                 const itemY = stepY + Math.sin(itemAngle) * svgConfig.itemDistance;
@@ -550,7 +711,6 @@ export function MindmapSVG({ selectedAxis, onNodeClick }: MindmapSVGProps) {
               const stepY = axis.y + Math.sin(stepAngle) * svgConfig.stepDistance;
 
               const itemCount = step.items.length;
-              // 項目数に応じてスプレッド角度を調整（線と同じ計算式）
               const itemSpread = svgConfig.itemSpreadBase * Math.min(itemCount / 3, 1.5);
 
               return step.items.map((item, itemIndex) => {
@@ -567,8 +727,8 @@ export function MindmapSVG({ selectedAxis, onNodeClick }: MindmapSVGProps) {
                       e.stopPropagation();
                       handleItemClick(axis.code, step.id, item.id);
                     }}
-                    onMouseEnter={() => setHoveredNode(`${axis.code}_${step.id}_${item.id}`)}
-                    onMouseLeave={() => setHoveredNode(null)}
+                    onPointerEnter={() => setHoveredNode(`${axis.code}_${step.id}_${item.id}`)}
+                    onPointerLeave={() => setHoveredNode(null)}
                     style={{ cursor: "pointer" }}
                   >
                     <circle
@@ -618,8 +778,8 @@ export function MindmapSVG({ selectedAxis, onNodeClick }: MindmapSVGProps) {
                     e.stopPropagation();
                     toggleStepExpand(axis.code, step.id);
                   }}
-                  onMouseEnter={() => setHoveredNode(stepKey)}
-                  onMouseLeave={() => setHoveredNode(null)}
+                  onPointerEnter={() => setHoveredNode(stepKey)}
+                  onPointerLeave={() => setHoveredNode(null)}
                   style={{ cursor: "pointer" }}
                 >
                   <circle
@@ -660,8 +820,8 @@ export function MindmapSVG({ selectedAxis, onNodeClick }: MindmapSVGProps) {
                   e.stopPropagation();
                   toggleAxisExpand(axis.code);
                 }}
-                onMouseEnter={() => setHoveredNode(axis.code)}
-                onMouseLeave={() => setHoveredNode(null)}
+                onPointerEnter={() => setHoveredNode(axis.code)}
+                onPointerLeave={() => setHoveredNode(null)}
                 style={{ cursor: "pointer" }}
               >
                 <circle
@@ -684,7 +844,6 @@ export function MindmapSVG({ selectedAxis, onNodeClick }: MindmapSVGProps) {
                 >
                   {axis.name}
                 </text>
-                {/* 展開インジケーター */}
                 <text
                   x={axis.x}
                   y={axis.y + svgConfig.axisRadius + 14}
@@ -733,19 +892,44 @@ export function MindmapSVG({ selectedAxis, onNodeClick }: MindmapSVGProps) {
         </svg>
       </div>
 
+      {/* モバイル用フローティングコントロール */}
+      <div className="absolute bottom-16 right-3 flex flex-col gap-1 sm:hidden">
+        <button
+          onClick={handleZoomIn}
+          className="p-2 rounded-lg bg-white/90 shadow-md border border-slate-200 active:bg-slate-100"
+        >
+          <ZoomIn className="w-5 h-5 text-slate-700" />
+        </button>
+        <button
+          onClick={handleZoomOut}
+          className="p-2 rounded-lg bg-white/90 shadow-md border border-slate-200 active:bg-slate-100"
+        >
+          <ZoomOut className="w-5 h-5 text-slate-700" />
+        </button>
+        <button
+          onClick={handleFit}
+          className="p-2 rounded-lg bg-white/90 shadow-md border border-slate-200 active:bg-slate-100"
+        >
+          <Maximize2 className="w-5 h-5 text-slate-700" />
+        </button>
+        <div className="px-2 py-1 rounded-lg bg-white/90 shadow-md border border-slate-200 text-center">
+          <span className="text-xs font-medium text-slate-700">{Math.round(scale * 100)}%</span>
+        </div>
+      </div>
+
       {/* 凡例 */}
-      <div className="flex items-center justify-center gap-6 py-3 border-t border-slate-200 bg-white">
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-white border-2 border-slate-300" />
-          <span className="text-xs text-slate-600">未開始</span>
+      <div className="flex items-center justify-center gap-4 sm:gap-6 py-2 sm:py-3 border-t border-slate-200 bg-white">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-white border-2 border-slate-300" />
+          <span className="text-[10px] sm:text-xs text-slate-600">未開始</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-amber-500" />
-          <span className="text-xs text-slate-600">進行中</span>
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-amber-500" />
+          <span className="text-[10px] sm:text-xs text-slate-600">進行中</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-green-500" />
-          <span className="text-xs text-slate-600">完了</span>
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-green-500" />
+          <span className="text-[10px] sm:text-xs text-slate-600">完了</span>
         </div>
       </div>
     </div>
