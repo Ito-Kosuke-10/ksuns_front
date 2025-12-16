@@ -221,8 +221,8 @@ export function MindmapSVG({ selectedAxis, onNodeClick, onInteractionStart, onIn
   const [expandedAxes, setExpandedAxes] = useState<Set<string>>(new Set());
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
 
-  // ズーム・パン状態（モバイル向けに初期値を大きめに）
-  const [scale, setScale] = useState(0.5);
+  // ズーム・パン状態（初期値260%、最大1000%）
+  const [scale, setScale] = useState(2.6);
   const [translate, setTranslate] = useState({ x: 0, y: 0 });
   const [isInteracting, setIsInteracting] = useState(false);
 
@@ -249,9 +249,9 @@ export function MindmapSVG({ selectedAxis, onNodeClick, onInteractionStart, onIn
     itemSpreadBase: Math.PI * 0.4,
   }), []);
 
-  // フィットボタン押下時
+  // フィットボタン押下時（初期表示に戻す）
   const handleFit = useCallback(() => {
-    setScale(0.5);
+    setScale(2.6);
     setTranslate({ x: 0, y: 0 });
   }, []);
 
@@ -287,8 +287,8 @@ export function MindmapSVG({ selectedAxis, onNodeClick, onInteractionStart, onIn
     loadMindmapState();
   }, [loadMindmapState]);
 
-  // ズーム操作
-  const handleZoomIn = useCallback(() => setScale((s) => Math.min(s * 1.3, 5)), []);
+  // ズーム操作（最大1000%、最小30%）
+  const handleZoomIn = useCallback(() => setScale((s) => Math.min(s * 1.3, 10)), []);
   const handleZoomOut = useCallback(() => setScale((s) => Math.max(s / 1.3, 0.3)), []);
   const handleReset = useCallback(() => {
     setScale(1);
@@ -300,7 +300,7 @@ export function MindmapSVG({ selectedAxis, onNodeClick, onInteractionStart, onIn
     e.preventDefault();
     e.stopPropagation();
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    setScale((s) => Math.max(0.3, Math.min(5, s * delta)));
+    setScale((s) => Math.max(0.3, Math.min(10, s * delta)));
   }, []);
 
   // 2点間の距離を計算
@@ -359,7 +359,7 @@ export function MindmapSVG({ selectedAxis, onNodeClick, onInteractionStart, onIn
 
       setScale((prev) => {
         const newScale = prev * scaleFactor;
-        return Math.max(0.3, Math.min(5, newScale));
+        return Math.max(0.3, Math.min(10, newScale));
       });
 
       lastPinchDistanceRef.current = currentDistance;
