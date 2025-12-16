@@ -63,8 +63,12 @@ function DeepQuestionsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedAxisParam = searchParams.get("axis");
+  const nodeIdParam = searchParams.get("nodeId"); // マインドマップからの遷移時に使用
+  const cardIdParam = searchParams.get("cardId"); // マインドマップからの遷移時にチャットモーダルを開く
   const [axes, setAxes] = useState<AxisOption[]>([]);
   const [selectedAxis, setSelectedAxis] = useState<string | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(nodeIdParam);
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(cardIdParam);
   const [thread, setThread] = useState<DeepThread | null>(null);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
@@ -189,10 +193,30 @@ function DeepQuestionsContent() {
     }
   }, [axisParam, axes, selectedAxis, router, searchParams]);
 
+  // nodeIdパラメータの同期
+  useEffect(() => {
+    const nodeId = searchParams.get("nodeId");
+    if (nodeId !== selectedNodeId) {
+      setSelectedNodeId(nodeId);
+    }
+  }, [searchParams, selectedNodeId]);
+
+  // cardIdパラメータの同期（マインドマップからの遷移時にチャットモーダルを開く）
+  useEffect(() => {
+    const cardId = searchParams.get("cardId");
+    if (cardId !== selectedCardId) {
+      setSelectedCardId(cardId);
+    }
+  }, [searchParams, selectedCardId]);
+
   useEffect(() => {
     if (!selectedAxis) return;
     const loadThread = async () => {
-      const { data, status } = await apiFetch<DeepThread>(`/deep_questions?axis=${selectedAxis}`);
+      // nodeIdがある場合はクエリに含める
+      const url = selectedNodeId
+        ? `/deep_questions?axis=${selectedAxis}&node_id=${encodeURIComponent(selectedNodeId)}`
+        : `/deep_questions?axis=${selectedAxis}`;
+      const { data, status } = await apiFetch<DeepThread>(url);
       if (status === 401) {
         clearAccessToken();
         router.replace("/login");
@@ -205,14 +229,29 @@ function DeepQuestionsContent() {
       }
     };
     loadThread().catch(() => setError("深掘り履歴の取得に失敗しました。"));
-  }, [router, selectedAxis]);
+  }, [router, selectedAxis, selectedNodeId]);
 
   const handleSend = async () => {
     if (!input.trim() || !selectedAxis) return;
     setSending(true);
+
+    // nodeIdがある場合はbodyに含める（マインドマップ連携）
+    const requestBody: {
+      axis_code: string;
+      question: string;
+      node_id?: string;
+    } = {
+      axis_code: selectedAxis,
+      question: input,
+    };
+
+    if (selectedNodeId) {
+      requestBody.node_id = selectedNodeId;
+    }
+
     const { data, status } = await apiFetch<DeepThread>("/deep_questions/messages", {
       method: "POST",
-      body: { axis_code: selectedAxis, question: input },
+      body: requestBody,
     });
     if (status === 401) {
       clearAccessToken();
@@ -284,6 +323,24 @@ function DeepQuestionsContent() {
                   レーダーを更新する
                 </Button>
               </div>
+
+              {/* nodeIdが指定されている場合は表示 */}
+              {selectedNodeId && (
+                <div className="flex items-center gap-2 mt-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+                  <span className="text-xs font-semibold text-amber-700">
+                    対象カード: {selectedNodeId}
+                  </span>
+                  <button
+                    onClick={() => {
+                      setSelectedNodeId(null);
+                      router.replace(`/deep_questions?axis=${selectedAxis}`, { scroll: false });
+                    }}
+                    className="text-xs text-amber-600 hover:text-amber-800 underline"
+                  >
+                    解除
+                  </button>
+                </div>
+              )}
             </Card>
 
             {/* axis=concept の場合は ConceptPage のコンテンツを表示 */}
@@ -295,21 +352,21 @@ function DeepQuestionsContent() {
             {/* axis=marketing の場合は MarketingPage のコンテンツを表示 */}
             {/* axis=menu の場合は MenuPage のコンテンツを表示 */}
             {selectedAxis === "concept" ? (
-              <ConceptPage hideHeader={true} />
+              <ConceptPage hideHeader={true} initialCardId={selectedCardId} />
             ) : selectedAxis === "revenue_forecast" ? (
-              <RevenueForecastPage hideHeader={true} />
+              <RevenueForecastPage hideHeader={true} initialCardId={selectedCardId} />
             ) : selectedAxis === "funding_plan" ? (
-              <FundingPlanPage hideHeader={true} />
+              <FundingPlanPage hideHeader={true} initialCardId={selectedCardId} />
             ) : selectedAxis === "operation" ? (
-              <OperationPage hideHeader={true} />
+              <OperationPage hideHeader={true} initialCardId={selectedCardId} />
             ) : selectedAxis === "location" ? (
-              <LocationPage hideHeader={true} />
+              <LocationPage hideHeader={true} initialCardId={selectedCardId} />
             ) : selectedAxis === "interior_exterior" ? (
-              <InteriorExteriorPage hideHeader={true} />
+              <InteriorExteriorPage hideHeader={true} initialCardId={selectedCardId} />
             ) : selectedAxis === "marketing" ? (
-              <MarketingPage hideHeader={true} />
+              <MarketingPage hideHeader={true} initialCardId={selectedCardId} />
             ) : selectedAxis === "menu" ? (
-              <MenuPage hideHeader={true} />
+              <MenuPage hideHeader={true} initialCardId={selectedCardId} />
             ) : (
               <Card className="flex flex-col gap-4 p-4">
               <div className="flex items-center gap-2">

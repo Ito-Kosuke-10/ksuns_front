@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState, type ReactElement, useCallback } from "react";
+import { Suspense, useEffect, useMemo, useState, useRef, type ReactElement, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Building2, ChartBar, Home, MapPin, Megaphone, Sparkles, Timer, Utensils, Wallet } from "lucide-react";
+import { Building2, ChartBar, Home, MapPin, Megaphone, Sparkles, Timer, Utensils, Wallet, LayoutGrid, Target } from "lucide-react";
 import {
   PolarAngleAxis,
   PolarGrid,
@@ -18,7 +18,11 @@ import { Card } from "@/components/ui/card";
 import { Container } from "@/components/ui/container";
 import { apiFetch } from "@/lib/api-client";
 import { clearAccessToken, setAccessToken } from "@/lib/auth-token";
-import { getBrowserStorage } from "@/lib/storage"; // からちゃん追加部分 マイページ作成部分に対応
+import { getBrowserStorage } from "@/lib/storage";
+import { MindmapSVG } from "@/app/components/mindmap";
+
+// 表示モード（レーダー/マインドマップ）
+type ViewMode = "radar" | "mindmap";
 
 type AxisSummary = {
   code: string;
@@ -116,6 +120,32 @@ function DashboardContent() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [hoverAxis, setHoverAxis] = useState<string | null>(null);
+
+  // ▼追加：表示モード切替（レーダー/マインドマップ）
+  const [activeView, setActiveView] = useState<ViewMode>("radar");
+  const carouselRef = useRef<HTMLDivElement>(null);
+
+  // タブ切替時にカルーセルをスクロール
+  const handleViewChange = useCallback((view: ViewMode) => {
+    setActiveView(view);
+    if (carouselRef.current) {
+      const scrollLeft = view === "radar" ? 0 : carouselRef.current.scrollWidth / 2;
+      carouselRef.current.scrollTo({ left: scrollLeft, behavior: "smooth" });
+    }
+  }, []);
+
+  // カルーセルスクロール時にタブを同期
+  const handleCarouselScroll = useCallback(() => {
+    if (carouselRef.current) {
+      const scrollLeft = carouselRef.current.scrollLeft;
+      const halfWidth = carouselRef.current.scrollWidth / 2;
+      const newView = scrollLeft < halfWidth / 2 ? "radar" : "mindmap";
+      if (newView !== activeView) {
+        setActiveView(newView);
+      }
+    }
+  }, [activeView]);
+  // ▲追加ここまで
   // ▼追加：プランUI用のlocalStorage管理
   type LocalPlan = { id: string; label: string; created_at: string };
 
@@ -217,8 +247,28 @@ function DashboardContent() {
       try {
         const { data, status } = await apiFetch<DashboardData>("/dashboard");
         if (status === 401) {
-          clearAccessToken();
-          router.replace("/");
+          // 開発用: 認証エラー時はモックデータを使用
+          const mockData: DashboardData = {
+            concept: { title: "駅近サラリーマン向け居酒屋", description: "仕事帰りにふらっと立ち寄れる大衆居酒屋" },
+            axes: AXIS_ORDER.map((code) => ({
+              code,
+              name: AXIS_LABELS[code] ?? code,
+              score: Math.random() * 6 + 2, // 2-8のランダムスコア
+              ok_line: 5,
+              growth_zone: 6,
+              comment: "テストコメント",
+              next_step: "次のステップ",
+              answered: 3,
+              total_questions: 5,
+            })),
+            detail_progress: { answered: 10, total: 40 },
+            next_focus: { axis_code: "concept", axis_name: "コンセプト", reason: "スコアが低い", message: "深掘りしましょう" },
+            ok_line: 5,
+            growth_zone: 6,
+            user_email: "test@example.com (モック)",
+          };
+          setData(fillAxisSummaries(mockData));
+          setLoading(false);
           return;
         }
         if (data) {
@@ -544,53 +594,115 @@ const renderAngleTick = (props: {
               </div>
             </Card>
 
-            <Card className="flex flex-col gap-3 p-5">
+            <Card className="flex flex-col gap-3 p-5 overflow-hidden">
+              {/* ▼タブ切替UI */}
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Radar</p>
-                  <h3 className="text-lg font-semibold text-slate-900">準備度レーダー</h3>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleViewChange("radar")}
+                    className={`
+                      flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all
+                      ${activeView === "radar"
+                        ? "bg-sky-600 text-white shadow-md"
+                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                      }
+                    `}
+                  >
+                    <Target className="w-4 h-4" />
+                    レーダー
+                  </button>
+                  <button
+                    onClick={() => handleViewChange("mindmap")}
+                    className={`
+                      flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all
+                      ${activeView === "mindmap"
+                        ? "bg-sky-600 text-white shadow-md"
+                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                      }
+                    `}
+                  >
+                    <LayoutGrid className="w-4 h-4" />
+                    進捗マップ
+                  </button>
                 </div>
-                <div className="hidden items-center gap-2 text-xs text-slate-600 lg:flex">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700">
-                    現在値
-                  </span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700">
-                    OKライン {data.ok_line}
-                  </span>
+                {activeView === "radar" && (
+                  <div className="hidden items-center gap-2 text-xs text-slate-600 lg:flex">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700">
+                      現在値
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700">
+                      OKライン {data.ok_line}
+                    </span>
+                  </div>
+                )}
+              </div>
+              {/* ▲タブ切替UI */}
+
+              {/* ▼カルーセル（scroll-snap） */}
+              <div
+                ref={carouselRef}
+                onScroll={handleCarouselScroll}
+                className="flex snap-x snap-mandatory overflow-x-auto scrollbar-hide"
+                style={{ scrollBehavior: "smooth" }}
+              >
+                {/* Slide 1: レーダーチャート */}
+                <div className="flex-shrink-0 w-full snap-center">
+                  <div className="h-[430px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RadarChart data={radarData}>
+                        <PolarGrid />
+                        <PolarAngleAxis dataKey="label" tick={renderAngleTick} />
+                        <PolarRadiusAxis
+                          angle={90}
+                          domain={[0, 10]}
+                          tick={({ payload, x, y }) => (
+                            <text x={x} y={y} textAnchor="middle" fill="#94a3b8" fontSize={10}>
+                              {payload.value}
+                            </text>
+                          )}
+                          strokeOpacity={0}
+                        />
+                        <Radar
+                          name="ok"
+                          dataKey="okLine"
+                          stroke={OK_LINE_COLOR}
+                          fill="transparent"
+                          isAnimationActive={false}
+                          strokeDasharray="4 4"
+                        />
+                        <Radar
+                          name="score"
+                          dataKey="value"
+                          stroke={PRIMARY_COLOR}
+                          fill={PRIMARY_COLOR}
+                          fillOpacity={0.25}
+                        />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Slide 2: マインドマップ */}
+                <div className="flex-shrink-0 w-full snap-center touch-pan-y">
+                  <div className="h-[430px] w-full overflow-y-auto">
+                    <MindmapSVG selectedAxis={hoverAxis} />
+                  </div>
                 </div>
               </div>
-              <div className="mt-2 h-[430px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart data={radarData}>
-                    <PolarGrid />
-                    <PolarAngleAxis dataKey="label" tick={renderAngleTick} />
-                    <PolarRadiusAxis
-                      angle={90}
-                      domain={[0, 10]}
-                      tick={({ payload, x, y }) => (
-                        <text x={x} y={y} textAnchor="middle" fill="#94a3b8" fontSize={10}>
-                          {payload.value}
-                        </text>
-                      )}
-                      strokeOpacity={0}
-                    />
-                    <Radar
-                      name="ok"
-                      dataKey="okLine"
-                      stroke={OK_LINE_COLOR}
-                      fill="transparent"
-                      isAnimationActive={false}
-                      strokeDasharray="4 4"
-                    />
-                    <Radar
-                      name="score"
-                      dataKey="value"
-                      stroke={PRIMARY_COLOR}
-                      fill={PRIMARY_COLOR}
-                      fillOpacity={0.25}
-                    />
-                  </RadarChart>
-                </ResponsiveContainer>
+              {/* ▲カルーセル */}
+
+              {/* スワイプインジケーター */}
+              <div className="flex justify-center gap-2 mt-2">
+                <div
+                  className={`w-2 h-2 rounded-full transition-all ${
+                    activeView === "radar" ? "bg-sky-600 w-4" : "bg-slate-300"
+                  }`}
+                />
+                <div
+                  className={`w-2 h-2 rounded-full transition-all ${
+                    activeView === "mindmap" ? "bg-sky-600 w-4" : "bg-slate-300"
+                  }`}
+                />
               </div>
             </Card>
           </div>

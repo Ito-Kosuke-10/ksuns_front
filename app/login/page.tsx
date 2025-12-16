@@ -1,13 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Header } from "../components/Header";
 import { apiFetch } from "@/lib/api-client";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [authUrl, setAuthUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -19,14 +17,13 @@ export default function LoginPage() {
         const { data } = await apiFetch<{ auth_url: string }>("/auth/google/url?allow_create=false");
         if (data?.auth_url) {
           setAuthUrl(data.auth_url);
-          // Google認証URLに自動リダイレクト
-          window.location.href = data.auth_url;
         } else {
           setError("認証URLの取得に失敗しました");
-          setLoading(false);
         }
       } catch (err) {
-        setError("認証URLの取得に失敗しました");
+        setError("認証URLの取得に失敗しました。しばらくしてから再度お試しください。");
+        console.error("Google OAuth URL取得失敗:", err);
+      } finally {
         setLoading(false);
       }
     };
@@ -43,11 +40,8 @@ export default function LoginPage() {
             <div className="text-center">
               <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#234a96] mb-4"></div>
               <h2 className="text-xl font-semibold text-[#234a96] mb-2">
-                Google認証に移動中...
+                読み込み中...
               </h2>
-              <p className="text-sm text-gray-600">
-                しばらくお待ちください
-              </p>
             </div>
           ) : error ? (
             <div className="text-center">
@@ -56,15 +50,17 @@ export default function LoginPage() {
               </h2>
               <p className="text-sm text-gray-600 mb-6">{error}</p>
               <button
-                onClick={() => router.push("/")}
+                onClick={() => {
+                  setError(null);
+                }}
                 className="bg-[#234a96] text-white px-8 py-3 rounded-full font-semibold hover:bg-[#436eae] transition-colors"
               >
-                トップページに戻る
+                再試行
               </button>
             </div>
           ) : (
             <div className="text-center">
-              <h2 className="text-xl font-semibold text-[#234a96] mb-4">
+              <h2 className="text-xl font-semibold text-[#234a96] mb-6">
                 ログイン
               </h2>
               {authUrl && (

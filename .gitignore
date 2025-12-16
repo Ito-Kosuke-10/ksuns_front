@@ -39,3 +39,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Claude Code
+.claude/
+
+# Development documentation
+**/BACKEND_*.md
+**/DESIGN.md
+**/IMPLEMENTATION.md
+
+# Backup files
+*.old.tsx
+*.old.ts
