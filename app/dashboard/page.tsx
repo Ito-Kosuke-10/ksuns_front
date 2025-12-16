@@ -719,7 +719,7 @@ const renderAngleTick = (props: {
                 </p>
                 {data.next_focus && (
                   <p className="mt-1 text-xs text-slate-700">
-                    次に強化: {data.next_focus.axis_name}（{data.next_focus.reason}）
+                    次に強化: {AXIS_LABELS[data.next_focus.axis_code] || data.next_focus.axis_name}（{data.next_focus.reason}）
                   </p>
                 )}
               </div>
@@ -760,7 +760,7 @@ const renderAngleTick = (props: {
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Report</p>
                 <h3 className="text-lg font-semibold text-slate-900">開業プラン出力</h3>
                 <p className="text-xs text-slate-600">
-                  開業プランをグラフィカルに表示するページに遷移します（現在はハリボテ画面）。
+                  開業プランをグラフィカルに表示するページに遷移します。
                 </p>
               </div>
             </div>
