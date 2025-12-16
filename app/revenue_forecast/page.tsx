@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, MessageSquare } from "lucide-react";
 
@@ -283,6 +283,16 @@ function RevenueForecastChatModal({
   const [isSummaryGenerating, setIsSummaryGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // チャットエリアの自動スクロール用ref
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // メッセージが追加されたら自動で一番下にスクロール
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [messages, loading]);
+
   // カードの初期質問（Backendの定数と一致）
   const INITIAL_QUESTIONS: Record<string, string> = {
     "1": "【STEP 1/3 - 質問1】ターゲット客層を考慮した昼の客単価を確定しましょう。どのくらいの金額を想定していますか？その根拠も教えてください。",
@@ -455,7 +465,10 @@ function RevenueForecastChatModal({
         )}
 
         {/* チャットエリア */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-gradient-to-b from-white to-slate-50">
+        <div
+          ref={chatContainerRef}
+          className="flex-1 overflow-y-auto p-5 space-y-4 bg-gradient-to-b from-white to-slate-50"
+        >
           {messages.map((msg, idx) => (
             <div
               key={idx}
