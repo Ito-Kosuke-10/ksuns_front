@@ -287,6 +287,20 @@ export function MindmapSVG({ selectedAxis, onNodeClick, onInteractionStart, onIn
     loadMindmapState();
   }, [loadMindmapState]);
 
+  // ノードをズームして中央に表示（570%）
+  const zoomToNode = useCallback((nodeX: number, nodeY: number) => {
+    const targetScale = 5.7; // 570%
+    // SVGの中心からの相対位置を計算し、その分だけ逆方向にtranslate
+    const offsetX = nodeX - svgConfig.centerX;
+    const offsetY = nodeY - svgConfig.centerY;
+    // スケール後の位置を中央に持ってくる
+    setScale(targetScale);
+    setTranslate({
+      x: -offsetX * targetScale,
+      y: -offsetY * targetScale,
+    });
+  }, [svgConfig.centerX, svgConfig.centerY]);
+
   // ズーム操作（最大1000%、最小30%）
   const handleZoomIn = useCallback(() => setScale((s) => Math.min(s * 1.3, 10)), []);
   const handleZoomOut = useCallback(() => setScale((s) => Math.max(s / 1.3, 0.3)), []);
@@ -421,11 +435,12 @@ export function MindmapSVG({ selectedAxis, onNodeClick, onInteractionStart, onIn
     }
   }, [isDragging, onInteractionEnd]);
 
-  // 軸の展開/折りたたみ
-  const toggleAxisExpand = useCallback((axisCode: string) => {
+  // 軸の展開/折りたたみ（展開時は570%ズームして中央表示）
+  const toggleAxisExpand = useCallback((axisCode: string, axisX?: number, axisY?: number) => {
     setExpandedAxes((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(axisCode)) {
+        // 折りたたみ時
         newSet.delete(axisCode);
         setExpandedSteps((steps) => {
           const newSteps = new Set(steps);
@@ -435,11 +450,15 @@ export function MindmapSVG({ selectedAxis, onNodeClick, onInteractionStart, onIn
           return newSteps;
         });
       } else {
+        // 展開時は570%ズームして中央に
         newSet.add(axisCode);
+        if (axisX !== undefined && axisY !== undefined) {
+          zoomToNode(axisX, axisY);
+        }
       }
       return newSet;
     });
-  }, []);
+  }, [zoomToNode]);
 
   // STEPの展開/折りたたみ
   const toggleStepExpand = useCallback((axisCode: string, stepId: string) => {
@@ -820,7 +839,7 @@ export function MindmapSVG({ selectedAxis, onNodeClick, onInteractionStart, onIn
                 key={`axis-${axis.code}`}
                 onClick={(e) => {
                   e.stopPropagation();
-                  toggleAxisExpand(axis.code);
+                  toggleAxisExpand(axis.code, axis.x, axis.y);
                 }}
                 onMouseEnter={() => setHoveredNode(axis.code)}
                 onMouseLeave={() => setHoveredNode(null)}

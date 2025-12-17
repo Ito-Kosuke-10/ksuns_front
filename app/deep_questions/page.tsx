@@ -2,13 +2,14 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Loader2, Send, Sparkles } from "lucide-react";
+import { Loader2, Send, Sparkles } from "lucide-react";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Container } from "@/components/ui/container";
 import { apiFetch } from "@/lib/api-client";
+import { Header } from "@/app/components/Header";
 import { clearAccessToken } from "@/lib/auth-token";
 import { ConceptPage } from "@/app/concept/page";
 import { RevenueForecastPage } from "@/app/revenue_forecast/page";
@@ -271,19 +272,10 @@ function DeepQuestionsContent() {
 
   return (
     <main id="deep-questions-root" className="min-h-screen bg-gradient-to-r from-white to-[#dae4ff] text-slate-900">
-      <Container id="deep-questions-container" className="flex flex-col gap-6 py-10">
+      <Header />
+      <Container id="deep-questions-container" className="flex flex-col gap-6 py-6 sm:py-10">
         <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              className="px-3 py-2 text-xs"
-              onClick={() => router.push("/dashboard")}
-            >
-              <ArrowLeft className="mr-1 h-4 w-4" />
-              マイページへ戻る
-            </Button>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Deep Questions</p>
-          </div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Deep Questions</p>
           <h1 className="text-2xl font-semibold text-slate-900">不足している軸を深掘りする</h1>
           <p className="text-sm text-slate-600">
             軸を選んで質問すると、AI が次の一歩を返します。必要に応じて何度でも聞き返せます。
