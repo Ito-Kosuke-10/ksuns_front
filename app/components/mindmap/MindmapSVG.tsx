@@ -289,17 +289,28 @@ export function MindmapSVG({ selectedAxis, onNodeClick, onInteractionStart, onIn
 
   // ノードをズームして中央に表示（570%）
   const zoomToNode = useCallback((nodeX: number, nodeY: number) => {
+    if (!containerRef.current) return;
+
     const targetScale = 5.7; // 570%
-    // SVGの中心からの相対位置を計算し、その分だけ逆方向にtranslate
+    const containerWidth = containerRef.current.clientWidth;
+    const containerHeight = containerRef.current.clientHeight;
+
+    // viewBoxからコンテナへの変換比率を計算
+    const viewBoxWidth = svgConfig.width; // 3000
+    const viewBoxHeight = svgConfig.height; // 2600
+    const baseScale = Math.min(containerWidth / viewBoxWidth, containerHeight / viewBoxHeight);
+
+    // SVG中心からノードまでのオフセット（viewBox座標系）
     const offsetX = nodeX - svgConfig.centerX;
     const offsetY = nodeY - svgConfig.centerY;
-    // スケール後の位置を中央に持ってくる
+
+    // viewBox座標をスクリーン座標に変換し、スケールを適用
     setScale(targetScale);
     setTranslate({
-      x: -offsetX * targetScale,
-      y: -offsetY * targetScale,
+      x: -offsetX * baseScale * targetScale,
+      y: -offsetY * baseScale * targetScale,
     });
-  }, [svgConfig.centerX, svgConfig.centerY]);
+  }, [svgConfig]);
 
   // ズーム操作（最大1000%、最小30%）
   const handleZoomIn = useCallback(() => setScale((s) => Math.min(s * 1.3, 10)), []);
