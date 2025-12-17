@@ -20,6 +20,7 @@ import { apiFetch } from "@/lib/api-client";
 import { clearAccessToken, setAccessToken } from "@/lib/auth-token";
 import { getBrowserStorage } from "@/lib/storage";
 import { MindmapSVG } from "@/app/components/mindmap";
+import { Header } from "@/app/components/Header";
 
 // 表示モード（レーダー/マインドマップ）
 type ViewMode = "radar" | "mindmap";
@@ -514,7 +515,8 @@ const renderAngleTick = (props: {
   if (loading || !data) {
     return (
       <main id="dashboard-root" className="min-h-screen bg-gradient-to-r from-white to-[#dae4ff] text-slate-900">
-        <Container id="dashboard-container" className="flex flex-col gap-6 py-10">
+        <Header showBackButton={false} />
+        <Container id="dashboard-container" className="flex flex-col gap-6 py-6 sm:py-10">
           <div className="flex flex-col gap-2">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex flex-col gap-1">
@@ -542,7 +544,8 @@ const renderAngleTick = (props: {
 
   return (
     <main id="dashboard-root" className="min-h-screen bg-gradient-to-r from-white to-[#dae4ff] text-slate-900">
-      <Container id="dashboard-container" className="flex flex-col gap-6 py-10">
+      <Header showBackButton={false} />
+      <Container id="dashboard-container" className="flex flex-col gap-6 py-6 sm:py-10">
         <div className="flex flex-col gap-2">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex flex-col gap-1">
@@ -586,10 +589,10 @@ const renderAngleTick = (props: {
             <Card className="flex flex-col gap-3 p-5">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Concept</p>
-                <h3 className="text-lg font-semibold text-slate-900">
+                <h3 className="text-base sm:text-lg font-semibold text-slate-900 break-words">
                   {data.concept.title || "コンセプト未設定"}
                 </h3>
-                <p className="text-sm text-slate-700">
+                <p className="text-xs sm:text-sm text-slate-700 break-words">
                   {data.concept.description || "結果を保存してコンセプトを確認してください。"}
                 </p>
               </div>

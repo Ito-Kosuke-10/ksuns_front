@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { apiFetch } from "@/lib/api-client";
 import { clearAccessToken } from "@/lib/auth-token";
+import { Header } from "@/app/components/Header";
 
 type ReportResponse = {
   content: string;
@@ -59,7 +60,10 @@ export default function ReportPage() {
 
   return (
     <main className="min-h-screen bg-gray-50 text-gray-900 print:bg-white">
-      <Container className="flex flex-col gap-6 py-10 print:py-0">
+      <div className="print:hidden">
+        <Header />
+      </div>
+      <Container className="flex flex-col gap-6 py-6 sm:py-10 print:py-0">
         {/* ヘッダーエリア */}
         <div className="flex flex-col gap-4 print:hidden">
           <div className="flex flex-col gap-2">
