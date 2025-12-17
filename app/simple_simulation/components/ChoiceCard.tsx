@@ -37,8 +37,8 @@ export function ChoiceCard({
       : "border-slate-200 hover:border-slate-400 hover:shadow-sm";
 
   const sizeClasses = hasImage
-    ? "min-h-[120px]"
-    : (isUnknown ? "py-4 min-h-[128px]" : "py-6 min-h-[168px]");
+    ? "min-h-[100px] sm:min-h-[120px]"
+    : (isUnknown ? "py-3 sm:py-4 min-h-[80px] sm:min-h-[128px]" : "py-4 sm:py-6 min-h-[100px] sm:min-h-[168px]");
 
   const composedClassName = [baseClasses, stateClasses, sizeClasses, className]
     .filter(Boolean)

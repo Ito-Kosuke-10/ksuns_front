@@ -159,15 +159,15 @@ export default function QuestionPage() {
   };
 
   return (
-    <div id="simple-question-root" className="flex flex-1 flex-col gap-6">
+    <div id="simple-question-root" className="flex flex-1 flex-col gap-4 sm:gap-6">
       <ProgressBar
         completed={completedCount}
         total={QUESTION_TOTAL}
       />
 
-      <header id="simple-question-header" className="flex flex-col gap-2">
-        <p className="text-sm font-medium text-slate-500">{question.title}</p>
-        <h1 className="text-2xl font-semibold leading-8 text-slate-900">
+      <header id="simple-question-header" className="flex flex-col gap-1 sm:gap-2">
+        <p className="text-xs sm:text-sm font-medium text-slate-500">{question.title}</p>
+        <h1 className="text-xl sm:text-2xl font-semibold leading-7 sm:leading-8 text-slate-900">
           {`Q${question.number}. ${question.prompt}`}
         </h1>
       </header>
@@ -257,7 +257,7 @@ export default function QuestionPage() {
           );
         }
       })() : (
-        <div id="simple-question-choice-grid" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div id="simple-question-choice-grid" className="grid grid-cols-1 gap-2 sm:gap-3 sm:grid-cols-2">
           {questionOptions.map((option: QuestionOption) => (
             <ChoiceCard
               key={option.value}
